@@ -36,7 +36,7 @@ var currentRow = 0
 var currentCol = 0
 const defaultColor: VGAColorMix = vgaColorMix(VGAWhite, VGABlack)
 
-proc clearScreen(): void =
+proc init*(): void =
   var i = 0
   while (i < VGAWidth*VGAHeight):
     vram[i] = vgaEntry(' ', defaultColor)
@@ -63,10 +63,3 @@ proc println*(s: string): void =
   for c in 0 .. s.len - 1:
     print(s[c])
   print('\n')
-
-proc kernel_main(): void {.exportc.} =
-  clearScreen()
-  println("Hello, NIM Kernel!")
-  println("version 0.0.0.0.0.1")
-  for i in 0 .. 30:
-    println("test row")

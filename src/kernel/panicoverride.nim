@@ -1,4 +1,4 @@
-import kernel
+import io
 
 {.push stack_trace: off, profiler:off.}
 
