@@ -1,0 +1,10 @@
+{"compile":[
+["/Users/pascalmouret/workspace/nimOS/src/kernel/nim/nimcache/kernel.c", "./cross/bin/i586-elf-gcc -c -w -w -nostdlib -ffreestanding -O2 -Wall -Wextra -O3 -fno-strict-aliasing  -I/usr/local/Cellar/nim/0.18.0/nim/lib -o /Users/pascalmouret/workspace/nimOS/src/kernel/nim/nimcache/kernel.o /Users/pascalmouret/workspace/nimOS/src/kernel/nim/nimcache/kernel.c"],
+["/Users/pascalmouret/workspace/nimOS/src/kernel/nim/nimcache/stdlib_system.c", "./cross/bin/i586-elf-gcc -c -w -w -nostdlib -ffreestanding -O2 -Wall -Wextra -O3 -fno-strict-aliasing  -I/usr/local/Cellar/nim/0.18.0/nim/lib -o /Users/pascalmouret/workspace/nimOS/src/kernel/nim/nimcache/stdlib_system.o /Users/pascalmouret/workspace/nimOS/src/kernel/nim/nimcache/stdlib_system.c"]
+],
+"link":[
+"/Users/pascalmouret/workspace/nimOS/src/kernel/nim/nimcache/kernel.o",
+"/Users/pascalmouret/workspace/nimOS/src/kernel/nim/nimcache/stdlib_system.o"
+],
+"linkcmd": "gcc   -o /Users/pascalmouret/workspace/nimOS/src/kernel/nim/kernel  /Users/pascalmouret/workspace/nimOS/src/kernel/nim/nimcache/kernel.o /Users/pascalmouret/workspace/nimOS/src/kernel/nim/nimcache/stdlib_system.o    "
+}

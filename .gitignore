@@ -1,13 +1,7 @@
 .DS_Store
 
-binutils-2.30/
-build-binutils/
-build-gcc/
-build-grub/
 cross/
-gcc-7.3.0/
-grub-2.02/
 nimOS.bin
 nimOS.iso
-objconv/
 target/
+toolchain_build/

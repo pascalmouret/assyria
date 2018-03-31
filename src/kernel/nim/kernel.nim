@@ -1,13 +1,13 @@
-proc memmove(dstPtr: ptr void, srcPtr: ptr void, length: uint): ptr {.exportc.} =
-  var dst = cast[ptr char[]](dstPtr)
-  let src = cast[ptr char[]](srcPtr)
-  if (dstPtr < srcPtr):
-    for i in 0 .. length - 1:
-      dst[i] = src[i]
-  else:
-    for i in length - 1 .. 0:
-      dst[i] = src[i]
-  return dstPtr
+# proc memmove(dstPtr: ptr void, srcPtr: ptr void, length: uint): ptr {.exportc.} =
+#   var dst = cast[ptr char[]](dstPtr)
+#   let src = cast[ptr char[]](srcPtr)
+#   if (dstPtr < srcPtr):
+#     for i in 0 .. length - 1:
+#       dst[i] = src[i]
+#   else:
+#     for i in length - 1 .. 0:
+#       dst[i] = src[i]
+#   return dstPtr
 
 const VGA_WIDTH = 80
 const VGA_HEIGHT = 25
