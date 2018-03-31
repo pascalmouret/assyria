@@ -1,14 +1,3 @@
-# proc memmove(dstPtr: ptr void, srcPtr: ptr void, length: uint): ptr {.exportc.} =
-#   var dst = cast[ptr char[]](dstPtr)
-#   let src = cast[ptr char[]](srcPtr)
-#   if (dstPtr < srcPtr):
-#     for i in 0 .. length - 1:
-#       dst[i] = src[i]
-#   else:
-#     for i in length - 1 .. 0:
-#       dst[i] = src[i]
-#   return dstPtr
-
 const VGA_WIDTH = 80
 const VGA_HEIGHT = 25
 const VRAM_LENGTH = VGA_WIDTH * VGA_HEIGHT
@@ -65,6 +54,9 @@ proc print(c: char): void =
     inc(currentCol)
   if (currentCol >= VGA_WIDTH or c == '\n'):
     inc(currentRow)
+    if (currentRow >= VGA_HEIGHT):
+      scroll()
+      dec(currentRow)
     currentCol = 0
 
 proc println*(s: string): void =
@@ -76,4 +68,5 @@ proc kernel_main(): void {.exportc.} =
   clearScreen()
   println("Hello, NIM Kernel!")
   println("version 0.0.0.0.0.1")
-  scroll()
+  for i in 0 .. 30:
+    println("test row")

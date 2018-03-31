@@ -5,3 +5,5 @@ nimOS.bin
 nimOS.iso
 target/
 toolchain_build/
+
+nimcache
