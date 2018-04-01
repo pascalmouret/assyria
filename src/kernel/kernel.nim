@@ -1,6 +1,7 @@
 import io
+import vga
 
 proc kernel_main(): void {.exportc.} =
   init()
   println("Hello, NIM Kernel!")
-  println("version 0.0.0.0.0.1")
+  println("Version 0.0.1", vgaColorMix(VGABlue, VGABlack))

@@ -1,15 +1,12 @@
 import io
+import vga
 
 {.push stack_trace: off, profiler:off.}
 
 proc rawoutput(s: string) =
-  while (true):
-    var a = 1
-  println(s)
+  println(s, vgaColorMix(VGARed, VGAWhite))
 
 proc panic(s: string) =
-  while (true):
-    var a = 1
   rawoutput(s)
 
 {.pop.}
