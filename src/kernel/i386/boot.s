@@ -5,7 +5,7 @@
 .set MAGIC,    0x1BADB002       /* 'magic number' lets bootloader find the header */
 .set CHECKSUM, -(MAGIC + FLAGS) /* checksum of above, to prove we are multiboot */
 
-/* 
+/*
 Declare a multiboot header that marks the program as a kernel. These are magic
 values that are documented in the multiboot standard. The bootloader will
 search for this signature in the first 8 KiB of the kernel file, aligned at a
@@ -36,14 +36,41 @@ stack_bottom:
 .skip 16384 # 16 KiB
 stack_top:
 
-/*
-The linker script specifies _start as the entry point to the kernel and the
-bootloader will jump to this position once the kernel has been loaded. It
-doesn't make sense to return from this function as the bootloader is gone.
-*/
+.section .data
+gdtr:
+	.short 0 	# size
+	.long 0		# base
+
 .section .text
-.global _start
+.global _start 								# mark entry point
+.global setGDT
+.type setGDT, @function
 .type _start, @function
+
+setGDT:
+	/*
+	This routine will let the processor know where to find the GDT.
+	It's assumed to be called with two arguments on the stack:
+	 - base pointer to the GDT (int)
+	 - size of the GDT (int)
+	*/
+	mov 4(%esp), %eax  				# load base into eax
+	movl %eax, gdtr + 2   		# store base
+	mov 8(%esp), %ax					# load size
+	mov %ax, gdtr							# store size
+	lgdt gdtr
+	jmp $0x08, $flushGDT			# override segment (binary: 1000) and jump
+flushGDT:
+	/*
+	Point all data segments to new segment.
+	*/
+	mov $0x10, %ax 						# our new data segment (binary: 10000)
+	mov %ax, %ds
+	mov %ax, %es
+	mov %ax, %fs
+	mov %ax, %gs
+	mov %ax, %ss
+	ret
 _start:
 	/*
 	The bootloader has loaded us into 32-bit protected mode on a x86
