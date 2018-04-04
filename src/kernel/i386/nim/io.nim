@@ -1,4 +1,5 @@
 import vga
+import typetraits
 
 const defaultColor: VGAColorMix = vgaColorMix(VGAWhite, VGABlack)
 

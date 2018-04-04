@@ -7,4 +7,4 @@ export TARGET='i386'
 export BUILD_DIR=$(pwd)/target
 export SYSROOT=$BUILD_DIR/sysroot
 
-export PROJECTS='kernel'
+export PROJECTS='kernel libnim'

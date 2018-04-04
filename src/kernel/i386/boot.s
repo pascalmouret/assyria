@@ -42,11 +42,10 @@ gdtr:
 	.long 0		# base
 
 .section .text
-.global _start 								# mark entry point
+.global _start
 .global setGDT
 .type setGDT, @function
 .type _start, @function
-
 setGDT:
 	/*
 	This routine will let the processor know where to find the GDT.
@@ -59,12 +58,12 @@ setGDT:
 	mov 8(%esp), %ax					# load size
 	mov %ax, gdtr							# store size
 	lgdt gdtr
-	jmp $0x08, $flushGDT			# override segment (binary: 1000) and jump
+	jmp $0x08, $flushGDT			# set segment to 1 and jump
 flushGDT:
 	/*
 	Point all data segments to new segment.
 	*/
-	mov $0x10, %ax 						# our new data segment (binary: 10000)
+	mov $0x10, %ax 						# our new data segment is 2
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
