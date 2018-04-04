@@ -5,7 +5,7 @@ import gdt
 import str
 
 type
-  MultibootHeader = array[15, uint32]
+  MultibootHeader = array[116, uint32]
   MultibootHeaderPtr = ptr MultibootHeader
 
 proc kernel_main(multibootHeader: MultibootHeaderPtr, magic: int): void {.exportc.} =
