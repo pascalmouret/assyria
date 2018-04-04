@@ -63,7 +63,7 @@ flushGDT:
 	/*
 	Point all data segments to new segment.
 	*/
-	mov $0x10, %ax 						# our new data segment is 2
+	mov $0x10, %ax 						# our new data seg
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
@@ -90,6 +90,13 @@ _start:
 	in assembly as languages such as C cannot function without a stack.
 	*/
 	mov $stack_top, %esp
+
+	/*
+	Load pointer to the multiboot info structure and the magic multiboot number
+	onto the stack for kernel_main.
+	*/
+	push %eax
+	push %ebx
 
 	/*
 	This is a good place to initialize crucial processor state before the

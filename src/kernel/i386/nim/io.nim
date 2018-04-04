@@ -7,7 +7,7 @@ var currentRow = 0
 var currentCol = 0
 var currentColor: VGAColorMix = defaultColor
 
-proc print(c: char): void
+proc print*(c: char): void
 proc scroll(rows: int): void
 
 proc setColor*(color: VGAColorMix): void =
@@ -37,7 +37,7 @@ proc scroll(rows: int): void =
   for i in (VRAM_LENGTH - VGA_WIDTH * rows) - 1 .. VRAM_LENGTH - 1:
     vram[i] = vgaEntry(' ', defaultColor)
 
-proc print(c: char): void =
+proc print*(c: char): void =
   if (c != '\n'):
     vram[VGA_WIDTH * currentRow + currentCol] = vgaEntry(c, currentColor)
     inc(currentCol)
