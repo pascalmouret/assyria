@@ -1,5 +1,3 @@
-import io
-
 #[
 GDT Entry Description
   bits 00 - 15: limit 0 - 15
@@ -54,7 +52,7 @@ proc buildGDTFlags(gran: bool, size: bool): GDTFlags
 proc buildGDTEntry(accessByte: GDTAccessByte, flags: GDTFlags, base: uint32, limit: uint32): GDTEntry
 
 proc loadGDT*(): void =
-  println("loading GDT")
+  discard
   # var gdt = cast[ptr GDT](createU(GDT, 1))
   # gdt[0] = cast[GDTEntry](0.uint64)
   # gdt[1] = buildGDTEntry(buildGDTAccessByte(true, false, true, Ring0), buildGDTFlags(true, true), 0, 0xfffff)

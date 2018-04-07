@@ -19,13 +19,14 @@ NIMFLAGS=\
 .PHONY: kernel install-lib install-headers install
 
 kernel:
-	$(AS) $(TARGET)/boot.s -o $(BUILD_DIR)/boot.o
-	$(NIM) c -d:release $(NIMFLAGS) kernel.nim
-	$(GCC) -T $(TARGET)/linker.ld $(CFLAGS) -o $(BUILD_DIR)/nimOS.bin $(BUILD_DIR)/boot.o `find $(NIMCACHE) -name *.o`
+	$(AS) arch/$(TARGET)/boot.s -o $(BUILD_DIR)/boot.o
+	$(NIM) c -d:release $(NIMFLAGS) nim/kernel.nim
+	$(GCC) -T arch/$(TARGET)/linker.ld $(CFLAGS) -o $(BUILD_DIR)/nimOS.bin $(BUILD_DIR)/boot.o `find $(NIMCACHE) -name *.o`
 
 install-lib: install-headers
-	mkdir -p $(SYSROOT)
-	cp -R $(TARGET)/nim/ $(SYSROOT)
+	mkdir -p $(SYSROOT)/kernel/arch
+	cp -R nim/ $(SYSROOT)/kernel
+	cp -R arch/$(TARGET)/nim/ $(SYSROOT)/kernel/arch
 
 install-headers:
 	mkdir -p $(SYSROOT)/usr/include

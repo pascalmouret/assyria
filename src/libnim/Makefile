@@ -2,6 +2,6 @@
 
 install-lib:
 	mkdir -p $(SYSROOT)
-	cp -R `find ./ -name *.nim` $(SYSROOT)
+	find . -name '*.nim' -exec cp {} $(SYSROOT) \;
 
 install:

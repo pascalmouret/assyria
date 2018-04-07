@@ -3,21 +3,20 @@ import io
 
 proc length(i: int, base: int): int =
   result = 1
-  var remove = 10
   while (i - (base^result) > 0):
     inc(result)
   return result
 
-proc printIntRec(i: int, base: int): void =
+proc printIntRec(i: Natural, base: int): void =
   if (i > 0):
     let digit = i %% base
-    printIntRec(((i - digit) / base).int, base)
+    printIntRec(((i - digit) div base), base)
     print(char((if digit > 9: ord('A') - 10 else: ord('0')) + digit))
 
-proc printInt*(i: int, base: int): void =
+proc printInt*(i: Natural, base: int): void =
   var
-    tmp: int
-    negative: bool
+    tmp: Natural = i
+    negative: bool = i < 0
 
   if (negative):
     tmp = i * -1
@@ -31,5 +30,3 @@ proc printInt*(i: int, base: int): void =
     printIntRec(tmp, base)
   else:
     print('0')
-
-  print('\n')
