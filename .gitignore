@@ -4,4 +4,4 @@ cross/
 target/
 toolchain_build/
 
-nimcache
+.idea/
