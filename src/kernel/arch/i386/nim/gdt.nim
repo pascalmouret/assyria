@@ -44,7 +44,7 @@ type DPL = enum
 type GDT = array[3, GDTEntry]
 
 # external
-proc setGDT(gdtPtr: ptr uint, size: uint) {.header: "<asm_routines.h>", varargs.}
+proc setGDT(gdtPtr: pointer, size: csize) {.header: "<asm_routines.h>".}
 
 # internal
 proc buildGDTAccessByte(rw: bool, dc: bool, ex: bool, dpl: DPL): GDTAccessByte

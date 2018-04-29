@@ -1,5 +1,5 @@
 import io
-import kernel.arch.vga
+import vga
 
 {.push stack_trace: off, profiler:off.}
 

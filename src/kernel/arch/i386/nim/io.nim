@@ -1,4 +1,4 @@
-import kernel.arch.vga
+import vga
 
 proc print*(s: string): void
 proc print*(c: char): void

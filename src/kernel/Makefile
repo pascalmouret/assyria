@@ -1,35 +1,30 @@
-CFLAGS=-nostdlib -ffreestanding -O2 -Wall -Wextra -isystem $(SYSROOT)/usr/include
+include ../../make.config
 
-NIMCACHE=$(BUILD_DIR)/kernel/nimcache
+ARCH_DIR=arch/$(ARCH_TARGET)
 
-NIMFLAGS=\
---passc:"$(CFLAGS)" \
+NIMCACHE:=$(NIMCACHE)/kernel
+NIMFLAGS+=\
+--path:$(ARCH_DIR)/nim \
+--nimcache:$(NIMCACHE) \
+--deadCodeElim:on \
 --noLinking \
 --gc:none \
 --noMain \
---deadCodeElim:on \
 --boundChecks:on \
---cpu:$(TARGET) \
---os:standalone \
---cc:gcc \
---path:$(SYSROOT) \
---gcc.exe:$(GCC) \
---nimcache:$(NIMCACHE)
+--import:libc
 
-.PHONY: kernel install-lib install-headers install
+CFLAGS+=-Iinclude -lgcc
 
-kernel:
-	$(AS) arch/$(TARGET)/boot.s -o $(BUILD_DIR)/boot.o
+.PHONY: install install-lib
+
+$(KERNEL_BIN): boot.o install-lib
 	$(NIM) c -d:release $(NIMFLAGS) nim/kernel.nim
-	$(GCC) -T arch/$(TARGET)/linker.ld $(CFLAGS) -o $(BUILD_DIR)/nimOS.bin $(BUILD_DIR)/boot.o `find $(NIMCACHE) -name *.o`
+	$(GCC) -T $(ARCH_DIR)/linker.ld -o $@ $(BUILD_DIR)/boot.o `find $(NIMCACHE) -name *.o` $(CFLAGS)
 
-install-lib: install-headers
-	mkdir -p $(SYSROOT)/kernel/arch
-	cp -R nim/ $(SYSROOT)/kernel
-	cp -R arch/$(TARGET)/nim/ $(SYSROOT)/kernel/arch
+boot.o:
+	mkdir -p $(BUILD_DIR)
+	$(AS) $(ARCH_DIR)/boot.s -o $(BUILD_DIR)/$@
 
-install-headers:
-	mkdir -p $(SYSROOT)/usr/include
-	cp -R include/ $(SYSROOT)/usr/include
+install: $(KERNEL_BIN)
 
-install: kernel
+install-lib:

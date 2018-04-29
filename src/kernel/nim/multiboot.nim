@@ -10,11 +10,18 @@ Multiboot Memory Map Structure (in bytes)
           +-------------------+
 ]#
 type
+  MMapEntryKind* {.size: sizeOf(uint32).} = enum
+    Undefined
+    Usable
+    Unknown
+    Acpi
+    Reserved
+    Damaged
   MMapEntry* = object
-    size: uint32
-    base: uint64
-    limit: uint64
-    kind: uint32
+    size*: uint32
+    base*: uint64
+    limit*: uint64
+    kind*: MMapEntryKind
   MMap* = UncheckedArray[MMapEntry]
   MMapPtr* = ptr MMap
 
@@ -65,20 +72,17 @@ type
             +-------------------+
   ]#
   MultibootInfo* = object
-    flags: uint32
-    memLower: uint32
-    memUpper: uint32
-    bootDevie: uint32
-    cmdLine: uint32 # actually a cstring
-    modsCount: uint32
-    modsAddr: uint32
-    syms1: uint32
-    syms2: uint32
-    syms3: uint32
-    syms4: uint32
-    mmapLength: uint32
-    mmapPtr: ptr MMap
+    flags*: uint32
+    memLower*: uint32
+    memUpper*: uint32
+    bootDevie*: uint32
+    cmdLine*: uint32 # actually a cstring
+    modsCount*: uint32
+    modsAddr*: uint32
+    syms1*: uint32
+    syms2*: uint32
+    syms3*: uint32
+    syms4*: uint32
+    mmapLength*: uint32
+    mmapPtr*: ptr MMap
   MultibootInfoPtr* = ptr MultibootInfo
-
-proc test*(mbh: MultibootInfoPtr): uint32 =
-  return mbh.memLower
