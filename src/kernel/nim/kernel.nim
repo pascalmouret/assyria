@@ -23,3 +23,5 @@ proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
   clear()
   var b = init(mbInfo.mmapPtr[], mbInfo.mmapLength)
   printInt(b.size, 16)
+  println("")
+  printInt(b.base, 16)
