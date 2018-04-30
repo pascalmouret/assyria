@@ -6,7 +6,7 @@ type
   IDTType = enum
     Task32 = 0x5,
     Int16 = 0x6,
-    trap16 = 0x7,
+    Trap16 = 0x7,
     Int32 = 0xE,
     Trap32 = 0xF
   #[
