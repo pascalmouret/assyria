@@ -1,3 +1,5 @@
+.extern setGDT
+
 /* Declare constants for the multiboot header. */
 .set ALIGN,    1<<0             /* align loaded modules on page boundaries */
 .set MEMINFO,  1<<1             /* provide memory map */
@@ -38,26 +40,19 @@ stack_top:
 
 .section .data
 gdtr:
-	.short 0 	# size
-	.long 0		# base
+	.short 31 		# size
+gdt_ptr:
+	.long gdt		# base
+gdt:
+	.skip 32 	# space for 4 gdt entries
 
 .section .text
 .global _start
-.global setGDT
+.global loadGDT
 .type setGDT, @function
 .type _start, @function
-setGDT:
-	/*
-	This routine will let the processor know where to find the GDT.
-	It's assumed to be called with two arguments on the stack:
-	 - base pointer to the GDT (int)
-	 - size of the GDT (int)
-	*/
-	mov 4(%esp), %eax  				# load base into eax
-	movl %eax, gdtr + 2   		# store base
-	mov 8(%esp), %ax					# load size
-	mov %ax, gdtr							# store size
-	lgdt gdtr
+loadGDT:
+	lgdt (gdtr)
 	jmp $0x08, $flushGDT			# set segment to 1 and jump
 flushGDT:
 	/*
@@ -108,6 +103,11 @@ _start:
 	C++ features such as global constructors and exceptions will require
 	runtime support to work as well.
 	*/
+
+	pushl (gdt_ptr)
+	call setGDT
+	add $4, %esp
+	call loadGDT
 
 	/*
 	Enter the high-level kernel. The ABI requires the stack is 16-byte

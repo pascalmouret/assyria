@@ -1,5 +1,4 @@
 import multiboot
-import str
 
 import options
 

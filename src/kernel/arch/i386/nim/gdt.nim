@@ -1,3 +1,5 @@
+import unsigned
+
 #[
 GDT Entry Description
   bits 00 - 15: limit 0 - 15
@@ -41,23 +43,18 @@ type DPL = enum
   Ring2,
   Ring3
 
-type GDT = array[3, GDTEntry]
-
-# external
-proc setGDT(gdtPtr: pointer, size: csize) {.header: "<asm_routines.h>".}
+type GDT = array[4, GDTEntry]
 
 # internal
 proc buildGDTAccessByte(rw: bool, dc: bool, ex: bool, dpl: DPL): GDTAccessByte
 proc buildGDTFlags(gran: bool, size: bool): GDTFlags
 proc buildGDTEntry(accessByte: GDTAccessByte, flags: GDTFlags, base: uint32, limit: uint32): GDTEntry
 
-proc loadGDT*(): void =
-  discard
-  # var gdt = cast[ptr GDT](createU(GDT, 1))
-  # gdt[0] = cast[GDTEntry](0.uint64)
-  # gdt[1] = buildGDTEntry(buildGDTAccessByte(true, false, true, Ring0), buildGDTFlags(true, true), 0, 0xfffff)
-  # gdt[2] = buildGDTEntry(buildGDTAccessByte(true, false, false, Ring0), buildGDTFlags(true, true), 0, 0xfffff)
-  # setGDT(cast[ptr uint](gdt), sizeof(GDT).uint)
+proc setGDT(gdtPtr: ptr GDT): void {.exportc.} =
+  gdtPtr[0] = cast[GDTEntry](0.uint64)
+  gdtPtr[1] = buildGDTEntry(buildGDTAccessByte(true, false, true, Ring0), buildGDTFlags(true, true), 0, 0xfffff.uint32)
+  gdtPtr[2] = buildGDTEntry(buildGDTAccessByte(true, false, false, Ring0), buildGDTFlags(true, true), 0, 0xfffff.uint32)
+  gdtPtr[3] = cast[GDTEntry](0.uint64)
 
 proc buildGDTAccessByte(rw: bool, dc: bool, ex: bool, dpl: DPL): GDTAccessByte =
   var accessByte: uint8 = 0b10010000 # present and always set to 1
@@ -81,9 +78,9 @@ proc buildGDTFlags(gran: bool, size: bool): GDTFlags =
 proc shiftedBase(base: uint32): uint64 =
   var entry = 0.uint64
 
-  let p1 = base and 0xffff # bits 0 - 15
-  let p2 = (base shr 16) and 0xff # bits 16 - 23
-  let p3 = (base shr 24) and 0xff # bits 24 - 31 (unnessecary?)
+  let p1: uint64 = base and 0xffff # bits 0 - 15
+  let p2: uint64 = (base shr 16) and 0xff # bits 16 - 23
+  let p3: uint64 = (base shr 24) and 0xff # bits 24 - 31 (unnessecary?)
 
   entry = entry or (p1 shl 16)
   entry = entry or (p2 shl 32)
@@ -94,8 +91,8 @@ proc shiftedBase(base: uint32): uint64 =
 proc shiftedLimit(limit: uint32): uint64 =
   var entry = 0.uint64
 
-  let p1 = limit and 0xffff # bits 0 - 15
-  let p2 = (limit shr 16) and 0xf # bits 16 - 19 (unnessecary?)
+  let p1: uint64 = limit and 0xffff # bits 0 - 15
+  let p2: uint64 = (limit shr 16) and 0xf # bits 16 - 19 (unnessecary?)
 
   entry = entry or p1
   entry = entry or (p2 shl 48)
@@ -106,14 +103,12 @@ proc buildGDTEntry(accessByte: GDTAccessByte, flags: GDTFlags, base: uint32, lim
   var entry = 0.uint64
 
   # add access byte and flags
-  entry = entry or (cast[uint32](accessByte) shl 40)
-  entry = entry or (cast[uint32](flags) shl 48)
+  entry = entry or (cast[uint64](accessByte) shl 40)
+  entry = entry or (cast[uint64](flags) shl 48)
 
   # add base and limit
   entry = entry or shiftedBase(base)
-  if limit > 0xfffff.uint32:
-    entry = entry or shiftedLimit(0xfffff) # exception?
-  else:
-    entry = entry or shiftedLimit(limit)
+  # TODO: verify limit based on granularity bit
+  entry = entry or shiftedLimit(limit)
 
   return cast[GDTEntry](entry)

@@ -1,8 +1,8 @@
 import multiboot
 
 import io
-import str
 import mem
+import gdt
 
 # proc printMMapEntry(mmapEntry: MMapEntry): void =
 #   print("Base: ")
@@ -21,7 +21,4 @@ import mem
 
 proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
   clear()
-  var b = init(mbInfo.mmapPtr[], mbInfo.mmapLength)
-  printInt(b.size, 16)
-  println("")
-  printInt(b.base, 16)
+  println("Assyria 0.0.1")

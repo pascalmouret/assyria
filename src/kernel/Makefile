@@ -19,7 +19,7 @@ CFLAGS+=-Iinclude -lgcc
 
 $(KERNEL_BIN): boot.o install-lib
 	$(NIM) c -d:release $(NIMFLAGS) nim/kernel.nim
-	$(GCC) -T $(ARCH_DIR)/linker.ld -o $@ $(BUILD_DIR)/boot.o `find $(NIMCACHE) -name *.o` $(CFLAGS)
+	$(GCC) -T $(ARCH_DIR)/linker.ld -o $@ `find $(NIMCACHE) -name *.o` $(BUILD_DIR)/boot.o $(CFLAGS)
 
 boot.o:
 	mkdir -p $(BUILD_DIR)
