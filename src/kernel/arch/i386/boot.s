@@ -48,8 +48,6 @@ gdt:
 
 .section .text
 .global _start
-.global loadGDT
-.type setGDT, @function
 .type _start, @function
 loadGDT:
 	lgdt (gdtr)
@@ -94,19 +92,13 @@ _start:
 	push %ebx
 
 	/*
-	This is a good place to initialize crucial processor state before the
-	high-level kernel is entered. It's best to minimize the early
-	environment where crucial features are offline. Note that the
-	processor is not fully initialized yet: Features such as floating
-	point instructions and instruction set extensions are not initialized
-	yet. The GDT should be loaded here. Paging should be enabled here.
-	C++ features such as global constructors and exceptions will require
-	runtime support to work as well.
+	Setting the GDT by pushing the pointer onto the stack and calling into
+	NIM code. Afterwards the GDT is actually loaded with assembly code.
 	*/
 
 	pushl (gdt_ptr)
 	call setGDT
-	add $4, %esp
+	add $4, %esp # clean stack
 	call loadGDT
 
 	/*
