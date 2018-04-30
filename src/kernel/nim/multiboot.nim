@@ -11,11 +11,11 @@ Multiboot Memory Map Structure (in bytes)
 ]#
 type
   MMapEntryKind* {.size: sizeOf(uint32).} = enum
-    Undefined
-    Usable
-    Unknown
-    Acpi
-    Reserved
+    Undefined,
+    Usable,
+    Unknown,
+    Acpi,
+    Reserved,
     Damaged
   MMapEntry* = object
     size*: uint32

@@ -1,4 +1,5 @@
 import unsigned
+import constants
 
 #[
 GDT Entry Description
@@ -37,12 +38,6 @@ GDT Flags Description (lowest to highest)
 ]#
 type GDTFlags = distinct uint8
 
-type DPL = enum
-  Ring0,
-  Ring1,
-  Ring2,
-  Ring3
-
 type GDT = array[4, GDTEntry]
 
 # internal
@@ -51,10 +46,10 @@ proc buildGDTFlags(gran: bool, size: bool): GDTFlags
 proc buildGDTEntry(accessByte: GDTAccessByte, flags: GDTFlags, base: uint32, limit: uint32): GDTEntry
 
 proc setGDT(gdtPtr: ptr GDT): void {.exportc.} =
-  gdtPtr[0] = cast[GDTEntry](0.uint64)
+  gdtPtr[0] = cast[GDTEntry](0.uint64) # null descriptor
   gdtPtr[1] = buildGDTEntry(buildGDTAccessByte(true, false, true, Ring0), buildGDTFlags(true, true), 0, 0xfffff.uint32)
   gdtPtr[2] = buildGDTEntry(buildGDTAccessByte(true, false, false, Ring0), buildGDTFlags(true, true), 0, 0xfffff.uint32)
-  gdtPtr[3] = cast[GDTEntry](0.uint64)
+  gdtPtr[3] = cast[GDTEntry](0.uint64) # reserved for TSS
 
 proc buildGDTAccessByte(rw: bool, dc: bool, ex: bool, dpl: DPL): GDTAccessByte =
   var accessByte: uint8 = 0b10010000 # present and always set to 1
@@ -64,7 +59,7 @@ proc buildGDTAccessByte(rw: bool, dc: bool, ex: bool, dpl: DPL): GDTAccessByte =
     accessByte = accessByte or (1 shl 2)
   if ex:
     accessByte = accessByte or (1 shl 3)
-  accessByte = accessByte or (ord(dc).uint8 shl 5)
+  accessByte = accessByte or (ord(dpl).uint8 shl 5)
   return cast[GDTAccessByte](accessByte)
 
 proc buildGDTFlags(gran: bool, size: bool): GDTFlags =

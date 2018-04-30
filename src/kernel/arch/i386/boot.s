@@ -38,13 +38,23 @@ stack_bottom:
 .skip 16384 # 16 KiB
 stack_top:
 
+gdt:
+	.skip 32 				# space for 4 gdt entries
+
+idt:
+	.skip 256*8 		# space for all 256 interrupts
+
+
 .section .data
 gdtr:
-	.short 31 		# size
+	.short 31 			# size
 gdt_ptr:
-	.long gdt		# base
-gdt:
-	.skip 32 	# space for 4 gdt entries
+	.long gdt				# base
+
+idtr:
+	.short 0
+idt_ptr:
+	.long idt
 
 .section .text
 .global _start
@@ -62,6 +72,9 @@ flushGDT:
 	mov %ax, %fs
 	mov %ax, %gs
 	mov %ax, %ss
+	ret
+loadIDT:
+	lidt (idtr)
 	ret
 _start:
 	/*
@@ -95,11 +108,15 @@ _start:
 	Setting the GDT by pushing the pointer onto the stack and calling into
 	NIM code. Afterwards the GDT is actually loaded with assembly code.
 	*/
-
 	pushl (gdt_ptr)
 	call setGDT
-	add $4, %esp # clean stack
+	add $4, %esp 			# clean stack
 	call loadGDT
+
+	pushl (idt_ptr)
+	call setIDT
+	add $4, %esp			# clean stack
+	call loadIDT
 
 	/*
 	Enter the high-level kernel. The ABI requires the stack is 16-byte
