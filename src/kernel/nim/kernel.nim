@@ -1,8 +1,7 @@
 import multiboot
 
 import io
-import mem
-import gdt
+import arch
 
 # proc printMMapEntry(mmapEntry: MMapEntry): void =
 #   print("Base: ")
@@ -20,5 +19,5 @@ import gdt
 #     dec(i)
 
 proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
-  clear()
+  archInit()
   println("Assyria 0.0.1")

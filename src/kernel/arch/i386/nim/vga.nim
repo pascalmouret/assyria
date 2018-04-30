@@ -66,3 +66,5 @@ proc clear*(): void =
   while (i < VRAM_LENGTH):
     vram[i] = vgaEntry(' ', currentColor)
     inc(i)
+  currentRow = 0
+  currentCol = 0
