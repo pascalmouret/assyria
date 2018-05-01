@@ -23,4 +23,7 @@ proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
   println("Assyria 0.0.1")
   asm """
   	int $0x42
+    mov $0, %eax
+    mov $0, %ecx
+    div %ecx
   """

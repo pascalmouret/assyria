@@ -4,13 +4,21 @@ import io
 import unsigned
 
 type
+  IFrame* = object
+    eflags*: uint16
+    unused*: uint8
+    cs*: uint8
+    eip*: uint16
   #[
-  Interrupt and Fault handlers need to use the {.cdecl.} pragma, because
-  a normal proc handler is a tuple of address and environment, but we only
-  want the address.
+  Interrupt and Fault handlers need to use the {.cdecl.} pragma to get a
+  compatible pointer.
   ]#
-  IntProc = proc(p: pointer): void {.cdecl.}
-  FaultProc = proc(p: pointer, ec: uint16): void {.cdecl.}
+  IntProc = proc(p: ptr IFrame): void {.cdecl.}
+  #[
+  This type is needed because some x86 exceptions also push an error code onto
+  the stack.
+  ]#
+  FaultProc = proc(p: ptr IFrame, ec: cuint): void {.cdecl.}
   IDTType* = enum
     Task32 = 0x5,
     Int16 = 0x6,
