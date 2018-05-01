@@ -1,8 +1,10 @@
 import constants
+import io
 
 import unsigned
 
 type
+  IntProc = proc(): void {.cdecl.}
   IDTType = enum
     Task32 = 0x5,
     Int16 = 0x6,
@@ -17,27 +19,29 @@ type
     7     : Present
   ]#
   IDTTypeAttr = distinct uint8
-  IDTEntry = object
-    offset1: uint16 # 0 - 15
+  IDTEntry* = object
+    offset1*: uint16 # 0 - 15
     segSelector: uint16
     zero: uint8
     typeAttr: IDTTypeAttr
-    offset2: uint16 # 16 - 31
+    offset2*: uint16 # 16 - 31
   IDT = array[256, IDTEntry]
 
-proc setIDT(idtPtr: ptr IDT): void {.exportc.} =
-  discard
+var idt*: ptr IDT = cast[ptr IDT](0)
 
-proc newIDTEntry(typeAttr: IDTTypeAttr, f: void -> void): IDTEntry =
-  newIDTEntry(typeAttr, cast[uint32](f), DataSegment.Code)
+proc setIDT(idtPtr: ptr IDT): void {.exportc.} =
+  idt = idtPtr
 
 proc newIDTEntry(typeAttr: IDTTypeAttr, offset: uint32, seg: uint16): IDTEntry =
-  var entry: IDTEntry = cast[IDTEntry](0.uint64) # trick compiler into allocating on stack
-  entry.offset1 = offset.uint16
-  entry.offset2 = (offset shr 16).uint16
-  entry.segSelector = seg
-  entry.typeAttr = typeAttr
-  return entry
+  result = cast[IDTEntry](0.uint64) # trick compiler into allocating on stack
+  result.offset1 = offset.uint16
+  result.offset2 = (offset shr 16).uint16
+  result.segSelector = seg
+  result.typeAttr = typeAttr
+  return result
+
+proc newIDTEntry(typeAttr: IDTTypeAttr, f: IntProc): IDTEntry =
+  return newIDTEntry(typeAttr, cast[uint32](f), ord(DataSegment.Code).uint16)
 
 proc newIDTTypeAttr(kind: IDTType, storage: bool, dpl: DPL, active: bool): IDTTypeAttr =
   var result = 0.uint8
@@ -46,3 +50,15 @@ proc newIDTTypeAttr(kind: IDTType, storage: bool, dpl: DPL, active: bool): IDTTy
   result = result or (cast[uint8](ord(dpl)) shl 5)
   result = result or (cast[uint8](ord(active)) shl 7)
   return cast[IDTTypeAttr](result)
+
+proc registerInterrupt*(vector: uint, typeAttr: IDTTypeAttr, f: IntProc): void {.exportc.} =
+  if cast[uint32](idt) != 0:
+    idt[vector] = newIDTEntry(typeAttr, f)
+  else:
+    discard # error handling
+
+proc registerTestInterrupt(f: IntProc): void {.exportc.} =
+  registerInterrupt(0x42.uint, newIDTTypeAttr(IDTType.Int32, false, DPL.Ring0, true), f)
+
+proc testHandler(): void {.exportc.} =
+  println("handling the answer to life, the universe and everything.")

@@ -47,5 +47,8 @@ proc printInt*(i: int, base: uint): void =
 proc printInt*(i: uint32, base: uint): void =
   printInt(i.uint64, base)
 
+proc printInt*(i: uint16, base: uint): void =
+  printInt(i.uint64, base)
+
 proc printInt*(i: uint8, base: uint): void =
   printInt(i.uint64, base)

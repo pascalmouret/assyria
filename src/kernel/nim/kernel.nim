@@ -21,3 +21,6 @@ import arch
 proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
   archInit()
   println("Assyria 0.0.1")
+  asm """
+  	int $0x42
+  """

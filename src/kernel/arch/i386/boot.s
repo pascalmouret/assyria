@@ -43,7 +43,7 @@ gdt:
 
 idt:
 	.skip 256*8 		# space for all 256 interrupts
-
+idt_end:
 
 .section .data
 gdtr:
@@ -52,13 +52,19 @@ gdt_ptr:
 	.long gdt				# base
 
 idtr:
-	.short 0
+	.short idt_end - idt
 idt_ptr:
 	.long idt
 
 .section .text
 .global _start
 .type _start, @function
+test_interrupt:
+	pushal
+	cld
+	call testHandler
+	popal
+	iret
 loadGDT:
 	lgdt (gdtr)
 	jmp $0x08, $flushGDT			# set segment to 1 and jump
@@ -117,6 +123,11 @@ _start:
 	call setIDT
 	add $4, %esp			# clean stack
 	call loadIDT
+
+	# test interrupt
+	pushl $test_interrupt
+	call registerTestInterrupt
+	add $4, %esp
 
 	/*
 	Enter the high-level kernel. The ABI requires the stack is 16-byte
