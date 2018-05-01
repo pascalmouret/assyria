@@ -4,8 +4,8 @@ import io
 import unsigned
 
 type
-  IntProc = proc(): void {.cdecl.}
-  IDTType = enum
+  IntProc* = proc(p: pointer): void {.cdecl.}
+  IDTType* = enum
     Task32 = 0x5,
     Int16 = 0x6,
     Trap16 = 0x7,
@@ -19,18 +19,15 @@ type
     7     : Present
   ]#
   IDTTypeAttr = distinct uint8
-  IDTEntry* = object
-    offset1*: uint16 # 0 - 15
+  IDTEntry = object
+    offset1: uint16 # 0 - 15
     segSelector: uint16
     zero: uint8
     typeAttr: IDTTypeAttr
-    offset2*: uint16 # 16 - 31
+    offset2: uint16 # 16 - 31
   IDT = array[256, IDTEntry]
 
-var idt*: ptr IDT = cast[ptr IDT](0)
-
-proc setIDT(idtPtr: ptr IDT): void {.exportc.} =
-  idt = idtPtr
+var idt: ptr IDT = cast[ptr IDT](0)
 
 proc newIDTEntry(typeAttr: IDTTypeAttr, offset: uint32, seg: uint16): IDTEntry =
   result = cast[IDTEntry](0.uint64) # trick compiler into allocating on stack
@@ -43,7 +40,7 @@ proc newIDTEntry(typeAttr: IDTTypeAttr, offset: uint32, seg: uint16): IDTEntry =
 proc newIDTEntry(typeAttr: IDTTypeAttr, f: IntProc): IDTEntry =
   return newIDTEntry(typeAttr, cast[uint32](f), ord(DataSegment.Code).uint16)
 
-proc newIDTTypeAttr(kind: IDTType, storage: bool, dpl: DPL, active: bool): IDTTypeAttr =
+proc newIDTTypeAttr*(kind: IDTType, storage: bool, dpl: DPL, active: bool): IDTTypeAttr =
   var result = 0.uint8
   result = result or cast[uint8](kind)
   result = result or (cast[uint8](ord(storage)) shl 4)
@@ -57,8 +54,5 @@ proc registerInterrupt*(vector: uint, typeAttr: IDTTypeAttr, f: IntProc): void {
   else:
     discard # error handling
 
-proc registerTestInterrupt(f: IntProc): void {.exportc.} =
-  registerInterrupt(0x42.uint, newIDTTypeAttr(IDTType.Int32, false, DPL.Ring0, true), f)
-
-proc testHandler(): void {.exportc.} =
-  println("handling the answer to life, the universe and everything.")
+proc setIDT(idtPtr: ptr IDT): void {.exportc.} =
+  idt = idtPtr
