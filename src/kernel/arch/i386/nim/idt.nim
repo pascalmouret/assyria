@@ -4,7 +4,13 @@ import io
 import unsigned
 
 type
-  IntProc* = proc(p: pointer): void {.cdecl.}
+  #[
+  Interrupt and Fault handlers need to use the {.cdecl.} pragma, because
+  a normal proc handler is a tuple of address and environment, but we only
+  want the address.
+  ]#
+  IntProc = proc(p: pointer): void {.cdecl.}
+  FaultProc = proc(p: pointer, ec: uint16): void {.cdecl.}
   IDTType* = enum
     Task32 = 0x5,
     Int16 = 0x6,
@@ -37,8 +43,8 @@ proc newIDTEntry(typeAttr: IDTTypeAttr, offset: uint32, seg: uint16): IDTEntry =
   result.typeAttr = typeAttr
   return result
 
-proc newIDTEntry(typeAttr: IDTTypeAttr, f: IntProc): IDTEntry =
-  return newIDTEntry(typeAttr, cast[uint32](f), ord(DataSegment.Code).uint16)
+proc newIDTEntry(typeAttr: IDTTypeAttr, f: uint32): IDTEntry =
+  return newIDTEntry(typeAttr, f, ord(DataSegment.Code).uint16)
 
 proc newIDTTypeAttr*(kind: IDTType, storage: bool, dpl: DPL, active: bool): IDTTypeAttr =
   var result = 0.uint8
@@ -49,8 +55,14 @@ proc newIDTTypeAttr*(kind: IDTType, storage: bool, dpl: DPL, active: bool): IDTT
   return cast[IDTTypeAttr](result)
 
 proc registerInterrupt*(vector: uint, typeAttr: IDTTypeAttr, f: IntProc): void {.exportc.} =
-  if cast[uint32](idt) != 0:
-    idt[vector] = newIDTEntry(typeAttr, f)
+  if cast[uint32](idt) != 0: # make sure idt is set
+    idt[vector] = newIDTEntry(typeAttr, cast[uint32](f))
+  else:
+    discard # error handling
+
+proc registerFault*(vector: uint, typeAttr: IDTTypeAttr, f: FaultProc): void {.exportc.} =
+  if cast[uint32](idt) != 0: # make sure idt is set
+    idt[vector] = newIDTEntry(typeAttr, cast[uint32](f))
   else:
     discard # error handling
 

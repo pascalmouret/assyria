@@ -73,9 +73,6 @@ flushGDT:
 	mov %ax, %gs
 	mov %ax, %ss
 	ret
-loadIDT:
-	lidt (idtr)
-	ret
 _start:
 	/*
 	The bootloader has loaded us into 32-bit protected mode on a x86
@@ -113,10 +110,14 @@ _start:
 	add $4, %esp 			# clean stack
 	call loadGDT
 
+	/*
+	Tell the CPU where to find the IDT and passing the pointer to it into NIM
+	code. The interrupts can be set dynamically after that.
+	*/
 	pushl (idt_ptr)
 	call setIDT
 	add $4, %esp			# clean stack
-	call loadIDT
+	lidt (idtr)				# tell the CPU where to check for interrupts
 
 	/*
 	Enter the high-level kernel. The ABI requires the stack is 16-byte
