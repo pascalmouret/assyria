@@ -5,6 +5,7 @@ ARCH_DIR=arch/$(ARCH_TARGET)
 NIMCACHE:=$(NIMCACHE)/kernel
 NIMFLAGS+=\
 --path:$(ARCH_DIR)/nim \
+--path:nim \
 --nimcache:$(NIMCACHE) \
 --deadCodeElim:on \
 --noLinking \

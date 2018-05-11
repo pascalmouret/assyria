@@ -10,9 +10,6 @@ type
 
 var blocks: ptr Block
 
-let kernelStart {.header: "<externals.h>", importc: "ldKernelStartSymbol"}: cchar
-let kernelEnd {.header: "<externals.h>", importc: "ldKernelEndSymbol"}: cchar
-
 proc initialListSize(mmap: MMap): int =
   var
     i = (entries div sizeOf(MMapEntry).uint32).int - 1

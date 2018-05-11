@@ -60,7 +60,7 @@ proc printChar*(c: char): void =
       dec(currentRow)
     currentCol = 0
 
-proc clear*(): void =
+proc vgaInit*(): void =
   setColor(defaultColor)
   var i = 0
   while (i < VRAM_LENGTH):

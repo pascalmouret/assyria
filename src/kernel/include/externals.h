@@ -1,2 +1,2 @@
-extern char ldKernelStartSymbol;
-extern char ldKernelEndSymbol;
+extern void ldKernelStartSymbol;
+extern void ldKernelEndSymbol;

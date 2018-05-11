@@ -6,7 +6,7 @@ proc print*(s: string): void
 proc print*(c: char): void
 proc println*(s: string): void
 
-proc clear*(): void = vga.clear()
+proc clear*(): void = vgaInit()
 
 proc println*(s: string): void =
   print(s)

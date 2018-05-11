@@ -1,8 +1,11 @@
-import gdt # import to make 'setGDT' available
-import idt # import to make 'setIDT' available
+import gdt # import to make 'setGDT' global
+import idt # import to make 'setIDT' global
 import vga
 import interrupt.init
+import paging.allocator
+import multiboot
 
-proc archInit*(): void =
+proc archInit*(mbInfo: MultibootInfoPtr): void =
   interruptInit()
-  clear()
+  vgaInit()
+  initPageStack(mbInfo.mmapPtr[], mbInfo.mmapLength)

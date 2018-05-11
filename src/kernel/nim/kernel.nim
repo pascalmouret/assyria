@@ -19,10 +19,8 @@ proc printMMap(mmapPtr: MMapPtr, length: uint32): void =
     dec(i)
 
 proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
-  archInit()
+  archInit(mbInfo)
   println("Assyria 0.0.1")
-  # printInt(mbInfo.flags, 2)
-  printMMap(mbInfo.mmapPtr, mbInfo.mmapLength)
   # asm """
   # 	int $0x42
   #   mov $0, %eax
