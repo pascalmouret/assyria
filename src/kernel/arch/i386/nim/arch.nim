@@ -6,7 +6,7 @@ import paging.allocator
 import multiboot
 import mem
 
-proc archInit*(mbInfo: MultibootInfoPtr): void =
+proc archInit*(): void =
   interruptInit()
   vgaInit()
-  initPageStack(mbInfo.mmapPtr[], mbInfo.mmapLength)
+  initPageStack()

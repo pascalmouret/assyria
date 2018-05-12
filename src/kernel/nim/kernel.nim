@@ -20,7 +20,8 @@ proc printMMap(mmapPtr: MMapPtr, length: uint32): void =
     dec(i)
 
 proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
-  archInit(mbInfo)
+  multibootInfoPtr = mbInfo
+  archInit()
   initMem()
   println("Assyria 0.0.1")
   var memory = alloc(2)

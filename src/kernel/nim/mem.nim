@@ -14,7 +14,9 @@ type
 
 var blocks: ptr Block = nil
 
+
 proc alloc*(size: int): pointer
+
 
 proc initMem*(): void =
   var 
@@ -27,13 +29,16 @@ proc initMem*(): void =
   blockPtr.prev = nil
   blocks = blockPtr
 
+
 proc newBlock(base: pointer, size: int, next: ptr Block, prev: ptr Block): ptr Block =
   result = cast[ptr Block](alloc(sizeOf(Block)))
   result[] = Block(base: base, size: size, next: next, prev: prev)
   return result
 
+
 proc newBlock(base: uint32, size: int, next: ptr Block, prev: ptr Block): ptr Block =
   result = newBlock(cast[pointer](base), size, next, prev)
+
 
 proc findBlock(size: int): ptr Block =
   var 
@@ -43,12 +48,16 @@ proc findBlock(size: int): ptr Block =
       return current
     current = current.next
 
+
 proc free*(add: pointer, size: int): void =
   blocks = newBlock(add, size, blocks, nil)
 
+
 proc free*[T](add: ptr T): void =
   free(cast[pointer](add), sizeOf(T))
-  
+
+
+# TODO: allow allocation of area bigger than one page
 proc alloc*(size: int): pointer =
   var bestBlock = findBlock(size)
   if bestBlock != nil:

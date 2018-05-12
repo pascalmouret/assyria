@@ -86,3 +86,6 @@ type
     mmapLength*: uint32
     mmapPtr*: ptr MMap
   MultibootInfoPtr* = ptr MultibootInfo
+
+# this pointer is set immidiately after call into kernel
+var multibootInfoPtr*: MultibootInfoPtr

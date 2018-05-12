@@ -13,30 +13,62 @@ to the symbol.
 ]#
 var kernelStart {.header: "<externals.h>", importc: "ldKernelStartSymbol"}: uint8
 var kernelEnd {.header: "<externals.h>", importc: "ldKernelEndSymbol"}: uint8
-var kernelStartAddr: pointer
-var kernelEndAddr: pointer
 
 type
   # the actual address is only 20 bit long, but for simplicities sake
   FrameAddress = distinct uint32
   FrameStack = UncheckedArray[FrameAddress]
+  ReservedMemory = object
+    base: pointer
+    size: csize
 
 var stackPtr: ptr FrameStack
 var freePages: int = 0
 
+#[
+A map of all memory regions which should not be put on the stack because they already hold
+important information.
+TODO: add kernel pages for them
+]#
+var reservedMemoryMap: array[3, ReservedMemory] = [
+  ReservedMemory(
+    base: addr kernelStart, 
+    size: cast[csize](cast[csize](addr kernelEnd) - cast[csize](addr kernelStart))
+  ),
+  ReservedMemory(
+    base: cast[pointer](multibootInfoPtr),
+    size: sizeOf(MultibootInfo)
+  ),
+  ReservedMemory(
+    base: cast[pointer](multibootInfoPtr.mmapPtr),
+    size: multibootInfoPtr.mmapLength.csize
+  )
+]
 
-proc nextFrameAlignedAddress(address: uint32): uint32 =
-  return address + (PAGE_SIZE.uint32 - (address mod PAGE_SIZE))
+
+proc nextFrameAlignedAddress(address: pointer): pointer =
+  return cast[pointer](cast[csize](address) + (PAGE_SIZE.csize - (cast[csize](address) mod PAGE_SIZE)))
 
 
-proc frameAddress(address: uint32): FrameAddress =
-  return cast[FrameAddress](address div PAGE_SIZE.uint32)
+proc frameAddress(address: pointer): FrameAddress =
+  return cast[FrameAddress](cast[csize](address) div PAGE_SIZE.csize)
 
 
-proc isKernelFrame(frame: FrameAddress): bool =
-  return frame.uint32 * PAGE_SIZE >= cast[uint32](kernelStartAddr) and frame.uint32 * PAGE_SIZE <= cast[uint32](kernelEndAddr)
+proc physicalAddress(frame: FrameAddress): pointer =
+  return cast[pointer](frame.csize * PAGE_SIZE)
 
 
+proc isReservedFrame(frame: FrameAddress): bool =
+  var physicalAddress = cast[csize](physicalAddress(frame))
+  for entry in reservedMemoryMap:
+    if physicalAddress >= cast[csize](entry.base) and physicalAddress <= cast[csize](entry.base) + entry.size:
+      # TODO: add kernel page
+      return true
+  return false
+
+
+# TODO: allow allocation of multiple pages
+# TODO: return virtual address, not physical
 proc freePage*(page: FrameAddress): void = 
   stackPtr[freePages] = page
   inc(freePages)
@@ -44,18 +76,18 @@ proc freePage*(page: FrameAddress): void =
 
 proc allocatePage*: pointer =
   dec(freePages)
-  return cast[pointer](stackPtr[freePages].uint32 * PAGE_SIZE)
+  return cast[pointer](stackPtr[freePages].csize * PAGE_SIZE)
 
 
-proc initMemoryBlock(base: uint32, limit: uint32): void =
+proc initMemoryBlock(base: pointer, limit: csize): void =
   var
     currentFrame: FrameAddress = frameAddress(nextFrameAlignedAddress(base))
-    nextFrame: FrameAddress = cast[FrameAddress](currentFrame.uint32 + 1)
-  while nextFrame.uint * PAGE_SIZE <= limit:
-    if not isKernelFrame(currentFrame):
+    nextFrame: FrameAddress = cast[FrameAddress](currentFrame.csize + 1)
+  while cast[csize](physicalAddress(nextFrame)) <= limit:
+    if not isReservedFrame(currentFrame):
       freePage(currentFrame)
     currentFrame = nextFrame
-    nextFrame = cast[FrameAddress](currentFrame.uint32 + PAGE_SIZE)
+    nextFrame = cast[FrameAddress](currentFrame.csize + PAGE_SIZE)
 
 
 proc fillStack(mmap: MMap, entries: int): void =
@@ -63,13 +95,12 @@ proc fillStack(mmap: MMap, entries: int): void =
 
   while i < entries:
     if mmap[i].kind == MMapEntryKind.Usable:
-      initMemoryBlock(mmap[i].base.uint32, mmap[i].limit.uint32)
+      initMemoryBlock(cast[pointer](mmap[i].base), mmap[i].limit.csize)
     inc(i)
 
 
-proc initPageStack*(mmap: MMap, mmapSize: uint32): void =
-  var mmapEntries = mmapSize div mmap[1].size.uint32
-  kernelStartAddr = addr kernelStart
-  kernelEndAddr = addr kernelEnd
-  stackPtr = cast[ptr FrameStack](kernelEndAddr)
-  fillStack(mmap, mmapEntries.int)
+# TODO: pre-allocate pages used for stack
+proc initPageStack*(): void =
+  var mmapEntries = multibootInfoPtr.mmapLength.csize div multibootInfoPtr.mmapPtr[0].size.csize
+  stackPtr = cast[ptr FrameStack](addr kernelEnd)
+  fillStack(multibootInfoPtr.mmapPtr[], mmapEntries.int)
