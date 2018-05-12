@@ -76,7 +76,7 @@ type
     memLower*: uint32
     memUpper*: uint32
     bootDevie*: uint32
-    cmdLine*: uint32 # actually a cstring
+    cmdLine*: cstring  # actually a cstring
     modsCount*: uint32
     modsAddr*: uint32
     syms1*: uint32

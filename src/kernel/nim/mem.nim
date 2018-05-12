@@ -1,10 +1,10 @@
 import paging.allocator
 import arch_constants
-import io
 
 import options
 import math
 
+# TODO: use built-in list (requires new and other magic)
 type
   Block = object
     base: pointer
@@ -12,7 +12,8 @@ type
     next: ptr Block
     prev: ptr Block
 
-var blocks: ptr Block = nil
+var freeBlocks: ptr Block = nil
+var usedBlocks: ptr Block = nil
 
 
 proc alloc*(size: int): pointer
@@ -27,7 +28,7 @@ proc initMem*(): void =
   blockPtr.size = PAGE_SIZE - sizeOfBlock
   blockPtr.next = nil
   blockPtr.prev = nil
-  blocks = blockPtr
+  freeBlocks = blockPtr
 
 
 proc newBlock(base: pointer, size: int, next: ptr Block, prev: ptr Block): ptr Block =
@@ -40,43 +41,64 @@ proc newBlock(base: uint32, size: int, next: ptr Block, prev: ptr Block): ptr Bl
   result = newBlock(cast[pointer](base), size, next, prev)
 
 
-proc findBlock(size: int): ptr Block =
+proc findFreeBlock(size: int): ptr Block =
   var 
-    current: ptr Block = blocks
+    current: ptr Block = freeBlocks
   while current != nil:
     if current.size >= size:
       return current
     current = current.next
 
 
-proc free*(add: pointer, size: int): void =
-  blocks = newBlock(add, size, blocks, nil)
+proc findUsedBlock(p: pointer): ptr Block =
+  var 
+    current: ptr Block = usedBlocks
+  while current != nil:
+    if current.base == p:
+      return current
+    current = current.next
 
 
-proc free*[T](add: ptr T): void =
-  free(cast[pointer](add), sizeOf(T))
+proc free*(p: pointer): void =
+  var usedBlock = findUsedBlock(p)
+  if usedBlock != nil:
+    if usedBlock.prev != nil:
+      usedBlock.prev.next = usedBlock.next
+    elif usedBlock.next != nil:
+      usedBlocks = usedBlock.next
+    else:
+      usedBlocks = nil
+    usedBlock.next = freeBlocks
+    freeBlocks = usedBlock
 
 
 # TODO: allow allocation of area bigger than one page
 proc alloc*(size: int): pointer =
-  var bestBlock = findBlock(size)
-  if bestBlock != nil:
-    result = bestBlock.base
-    if bestBlock.size == size and (bestBlock.next != nil or bestBlock.prev != nil):
-      if bestBlock.prev != nil:
-        bestBlock.prev.next = bestBlock.next
-        free(bestBlock)
-      elif bestBlock.next != nil:
-        blocks = bestBlock.next
-        free(bestBlock)
+  var
+    totalSize = size + sizeOf(Block)
+    freeBlock = findFreeBlock(totalSize)
+  if freeBlock != nil:
+    var
+      usedBlock = cast[ptr Block](cast[csize](freeBlock.base) + size)
+    usedBlock[] = Block(base: freeBlock.base, size: size, next: usedBlocks, prev: nil)
+    usedBlocks = usedBlock
+    result = usedBlock.base
+    if freeBlock.size == totalSize and (freeBlock.next != nil or freeBlock.prev != nil):
+      if freeBlock.prev != nil:
+        freeBlock.prev.next = freeBlock.next
+        free(freeBlock)
+      elif freeBlock.next != nil:
+        freeBlocks = freeBlock.next
+        free(freeBlock)
     else:
-      bestBlock.size = bestBlock.size - size
-      bestBlock.base = cast[pointer](cast[uint32](bestBlock.base) + size.uint32)
+      freeBlock.size = freeBlock.size - totalSize
+      freeBlock.base = cast[pointer](cast[uint32](freeBlock.base) + size.uint32)
   else:
-    blocks = newBlock(
+    asm """hlt"""
+    freeBlocks = newBlock(
       allocatePage(),
       PAGE_SIZE,
-      blocks,
+      freeBlocks,
       nil
     )
     return alloc(size)

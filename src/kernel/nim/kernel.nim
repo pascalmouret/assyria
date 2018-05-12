@@ -24,8 +24,13 @@ proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
   archInit()
   initMem()
   println("Assyria 0.0.1")
-  var memory = alloc(2)
+  var memory = alloc(34) # actual alloc + size of block
   printInt(cast[uint32](memory), 16)
+  println("")
+  free(memory)
+  memory = alloc(2)
+  printInt(cast[uint32](memory), 16)
+  println("")
   # asm """
   #   int $0x42
   #   mov $0, %eax
