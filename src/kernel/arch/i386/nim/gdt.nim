@@ -1,5 +1,5 @@
 import unsigned
-import constants
+import arch_constants
 
 #[
 GDT Entry Description

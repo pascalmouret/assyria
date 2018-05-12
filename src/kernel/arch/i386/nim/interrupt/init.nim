@@ -17,7 +17,7 @@ include interrupt.sys
 include interrupt.exceptions
 
 import idt
-import constants
+import arch_constants
 
 proc interruptInit*(): void =
   registerInterrupt(0x0.uint, newIDTTypeAttr(IDTType.Trap32, false, DPL.Ring0, true), divideByZeroException)

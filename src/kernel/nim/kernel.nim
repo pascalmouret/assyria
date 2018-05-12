@@ -1,4 +1,5 @@
 import multiboot
+import mem
 
 import io
 import arch
@@ -20,9 +21,12 @@ proc printMMap(mmapPtr: MMapPtr, length: uint32): void =
 
 proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
   archInit(mbInfo)
+  initMem()
   println("Assyria 0.0.1")
+  var memory = alloc(2)
+  printInt(cast[uint32](memory), 16)
   # asm """
-  # 	int $0x42
+  #   int $0x42
   #   mov $0, %eax
   #   mov $0, %ecx
   #   div %ecx

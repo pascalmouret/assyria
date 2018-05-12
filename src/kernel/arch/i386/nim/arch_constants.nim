@@ -8,3 +8,5 @@ type
     Null = 0x0
     Code = 0x8
     Data = 0x10
+
+const PAGE_SIZE* = 4096

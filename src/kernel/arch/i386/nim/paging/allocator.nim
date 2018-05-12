@@ -1,8 +1,7 @@
 import multiboot
+import arch_constants
 
 import math
-
-const PAGE_SIZE = 4096
 
 #[
 Start and end addresses of the kernel image in RAM. Necessary to avoid
@@ -31,7 +30,7 @@ proc nextFrameAlignedAddress(address: uint32): uint32 =
 
 
 proc frameAddress(address: uint32): FrameAddress =
-  return cast[FrameAddress](address div PAGE_SIZE)
+  return cast[FrameAddress](address div PAGE_SIZE.uint32)
 
 
 proc isKernelFrame(frame: FrameAddress): bool =
@@ -51,8 +50,8 @@ proc allocatePage*: pointer =
 proc initMemoryBlock(base: uint32, limit: uint32): void =
   var
     currentFrame: FrameAddress = frameAddress(nextFrameAlignedAddress(base))
-    nextFrame: FrameAddress = cast[FrameAddress](currentFrame.uint32 + PAGE_SIZE)
-  while nextFrame.uint <= limit:
+    nextFrame: FrameAddress = cast[FrameAddress](currentFrame.uint32 + 1)
+  while nextFrame.uint * PAGE_SIZE <= limit:
     if not isKernelFrame(currentFrame):
       freePage(currentFrame)
     currentFrame = nextFrame

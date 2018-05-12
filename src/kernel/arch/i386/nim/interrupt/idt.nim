@@ -1,4 +1,4 @@
-import constants
+import arch_constants
 import io
 
 import unsigned

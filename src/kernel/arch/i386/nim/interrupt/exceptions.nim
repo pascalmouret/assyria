@@ -1,5 +1,5 @@
 import io
-import idt
+import interrupt.idt
 
 proc halt(): void =
   asm """
