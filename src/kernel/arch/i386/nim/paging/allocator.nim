@@ -38,12 +38,12 @@ proc isKernelFrame(frame: FrameAddress): bool =
   return frame.uint32 * PAGE_SIZE >= cast[uint32](kernelStartAddr) and frame.uint32 * PAGE_SIZE <= cast[uint32](kernelEndAddr)
 
 
-proc freePage(page: FrameAddress): void =
+proc freePage*(page: FrameAddress): void = 
   stackPtr[freePages] = page
   inc(freePages)
 
 
-proc allocatePage: pointer =
+proc allocatePage*: pointer =
   dec(freePages)
   return cast[pointer](stackPtr[freePages].uint32 * PAGE_SIZE)
 
