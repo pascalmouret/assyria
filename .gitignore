@@ -5,3 +5,5 @@ target/
 toolchain_build/
 
 .idea/
+*.sublime-project
+*.sublime-workspace

@@ -25,18 +25,28 @@ type
 var stackPtr: ptr FrameStack
 var freePages: int = 0
 
+
 proc nextFrameAlignedAddress(address: uint32): uint32 =
   return address + (PAGE_SIZE.uint32 - (address mod PAGE_SIZE))
+
 
 proc frameAddress(address: uint32): FrameAddress =
   return cast[FrameAddress](address div PAGE_SIZE)
 
+
 proc isKernelFrame(frame: FrameAddress): bool =
   return frame.uint32 * PAGE_SIZE >= cast[uint32](kernelStartAddr) and frame.uint32 * PAGE_SIZE <= cast[uint32](kernelEndAddr)
+
 
 proc freePage(page: FrameAddress): void =
   stackPtr[freePages] = page
   inc(freePages)
+
+
+proc allocatePage: pointer =
+  dec(freePages)
+  return cast[pointer](stackPtr[freePages].uint32 * PAGE_SIZE)
+
 
 proc initMemoryBlock(base: uint32, limit: uint32): void =
   var
@@ -48,13 +58,15 @@ proc initMemoryBlock(base: uint32, limit: uint32): void =
     currentFrame = nextFrame
     nextFrame = cast[FrameAddress](currentFrame.uint32 + PAGE_SIZE)
 
+
 proc fillStack(mmap: MMap, entries: int): void =
-  var
-    i: int = 0
+  var i: int = 0
+
   while i < entries:
     if mmap[i].kind == MMapEntryKind.Usable:
       initMemoryBlock(mmap[i].base.uint32, mmap[i].limit.uint32)
     inc(i)
+
 
 proc initPageStack*(mmap: MMap, mmapSize: uint32): void =
   var mmapEntries = mmapSize div mmap[1].size.uint32
