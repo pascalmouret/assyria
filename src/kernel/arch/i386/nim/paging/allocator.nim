@@ -21,29 +21,38 @@ type
   ReservedMemory = object
     base: pointer
     size: csize
+  ReservedMemoryMap = array[4, ReservedMemory]
 
-var stackPtr: ptr FrameStack
+var stackPtr: ptr FrameStack = cast[ptr FrameStack](addr kernelEnd)
 var freePages: int = 0
+# initalised in initPageStack
+var reservedMemoryMap: ReservedMemoryMap
 
 #[
 A map of all memory regions which should not be put on the stack because they already hold
 important information.
-TODO: add kernel pages for them
+Not built during nim init because we need multiboot information.
 ]#
-var reservedMemoryMap: array[3, ReservedMemory] = [
-  ReservedMemory(
-    base: addr kernelStart, 
-    size: cast[csize](cast[csize](addr kernelEnd) - cast[csize](addr kernelStart))
-  ),
-  ReservedMemory(
-    base: cast[pointer](multibootInfoPtr),
-    size: sizeOf(MultibootInfo)
-  ),
-  ReservedMemory(
-    base: cast[pointer](multibootInfoPtr.mmapPtr),
-    size: multibootInfoPtr.mmapLength.csize
-  )
-]
+proc buildReservedMemoryMap(): ReservedMemoryMap =
+  return [
+    # lower memory
+    ReservedMemory(
+      base: cast[pointer](0x0),
+      size: 0x100000
+    ),
+    ReservedMemory(
+      base: addr kernelStart, 
+      size: cast[csize](cast[csize](addr kernelEnd) - cast[csize](addr kernelStart))
+    ),
+    ReservedMemory(
+      base: cast[pointer](multibootInfoPtr),
+      size: sizeOf(MultibootInfo)
+    ),
+    ReservedMemory(
+      base: cast[pointer](multibootInfoPtr.mmapPtr),
+      size: multibootInfoPtr.mmapLength.csize
+    )
+  ]
 
 
 proc nextFrameAlignedAddress(address: pointer): pointer =
@@ -99,8 +108,26 @@ proc fillStack(mmap: MMap, entries: int): void =
     inc(i)
 
 
-# TODO: pre-allocate pages used for stack
+# remove the pages filled up with the page stack
+proc removeStackFrames(): void =
+  var
+    base: csize = cast[csize](stackPtr)
+    size: csize = freePages * sizeOf(FrameAddress)
+    oldStackCount = 0
+    newStackCount = oldStackCount
+  while oldStackCount < freePages:
+    var 
+      physicalAddress = cast[csize](physicalAddress(stackPtr[oldStackCount]))
+    if not (physicalAddress >= base and physicalAddress <= base + size):
+      inc(newStackCount)
+      stackPtr[newStackCount] = stackPtr[oldStackCount]
+    inc(oldStackCount)
+  freePages = newStackCount
+
+
 proc initPageStack*(): void =
+  reservedMemoryMap = buildReservedMemoryMap()
   var mmapEntries = multibootInfoPtr.mmapLength.csize div multibootInfoPtr.mmapPtr[0].size.csize
   stackPtr = cast[ptr FrameStack](addr kernelEnd)
   fillStack(multibootInfoPtr.mmapPtr[], mmapEntries.int)
+  removeStackFrames()
