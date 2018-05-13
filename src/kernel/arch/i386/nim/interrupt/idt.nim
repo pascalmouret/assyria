@@ -41,7 +41,9 @@ type
     offset2: uint16 # 16 - 31
   IDT = array[256, IDTEntry]
 
+
 var idt: ptr IDT = cast[ptr IDT](0)
+
 
 proc newIDTEntry(typeAttr: IDTTypeAttr, offset: uint32, seg: uint16): IDTEntry =
   result = cast[IDTEntry](0.uint64) # trick compiler into allocating on stack
@@ -51,8 +53,10 @@ proc newIDTEntry(typeAttr: IDTTypeAttr, offset: uint32, seg: uint16): IDTEntry =
   result.typeAttr = typeAttr
   return result
 
+
 proc newIDTEntry(typeAttr: IDTTypeAttr, f: uint32): IDTEntry =
   return newIDTEntry(typeAttr, f, ord(DataSegment.Code).uint16)
+
 
 proc newIDTTypeAttr*(kind: IDTType, storage: bool, dpl: DPL, active: bool): IDTTypeAttr =
   var result = 0.uint8
@@ -62,17 +66,20 @@ proc newIDTTypeAttr*(kind: IDTType, storage: bool, dpl: DPL, active: bool): IDTT
   result = result or (cast[uint8](ord(active)) shl 7)
   return cast[IDTTypeAttr](result)
 
+
 proc registerInterrupt*(vector: uint, typeAttr: IDTTypeAttr, f: IntProc): void {.exportc.} =
   if cast[uint32](idt) != 0: # make sure idt is set
     idt[vector] = newIDTEntry(typeAttr, cast[uint32](f))
   else:
     discard # error handling
 
+
 proc registerFault*(vector: uint, typeAttr: IDTTypeAttr, f: FaultProc): void {.exportc.} =
   if cast[uint32](idt) != 0: # make sure idt is set
     idt[vector] = newIDTEntry(typeAttr, cast[uint32](f))
   else:
     discard # error handling
+
 
 proc setIDT(idtPtr: ptr IDT): void {.exportc.} =
   idt = idtPtr

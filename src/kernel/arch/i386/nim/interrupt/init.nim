@@ -19,6 +19,7 @@ include interrupt.exceptions
 import idt
 import arch_constants
 
+
 proc interruptInit*(): void =
   registerInterrupt(0x0.uint, newIDTTypeAttr(IDTType.Trap32, false, DPL.Ring0, true), divideByZeroException)
   registerInterrupt(0x1.uint, newIDTTypeAttr(IDTType.Trap32, false, DPL.Ring0, true), debugException)

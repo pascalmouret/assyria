@@ -8,7 +8,7 @@ import math
 type
   Block = object
     base: pointer
-    size: int
+    size: csize
     next: ptr Block
     prev: ptr Block
 
@@ -31,17 +31,17 @@ proc initMem*(): void =
   freeBlocks = blockPtr
 
 
-proc newBlock(base: pointer, size: int, next: ptr Block, prev: ptr Block): ptr Block =
+proc newBlock(base: pointer, size: csize, next: ptr Block, prev: ptr Block): ptr Block =
   result = cast[ptr Block](alloc(sizeOf(Block)))
   result[] = Block(base: base, size: size, next: next, prev: prev)
   return result
 
 
-proc newBlock(base: uint32, size: int, next: ptr Block, prev: ptr Block): ptr Block =
+proc newBlock(base: uint32, size: csize, next: ptr Block, prev: ptr Block): ptr Block =
   result = newBlock(cast[pointer](base), size, next, prev)
 
 
-proc findFreeBlock(size: int): ptr Block =
+proc findFreeBlock(size: csize): ptr Block =
   var 
     current: ptr Block = freeBlocks
   while current != nil:
@@ -73,7 +73,7 @@ proc free*(p: pointer): void =
 
 
 # TODO: allow allocation of area bigger than one page
-proc alloc*(size: int): pointer =
+proc alloc*(size: csize): pointer =
   var
     totalSize = size + sizeOf(Block)
     freeBlock = findFreeBlock(totalSize)

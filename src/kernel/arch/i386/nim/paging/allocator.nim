@@ -56,7 +56,9 @@ proc buildReservedMemoryMap(): ReservedMemoryMap =
 
 
 proc nextFrameAlignedAddress(address: pointer): pointer =
-  return cast[pointer](cast[csize](address) + (PAGE_SIZE.csize - (cast[csize](address) mod PAGE_SIZE)))
+  return cast[pointer](
+    cast[csize](address) + (PAGE_SIZE.csize - (cast[csize](address) mod PAGE_SIZE))
+  )
 
 
 proc frameAddress(address: pointer): FrameAddress =
@@ -70,19 +72,21 @@ proc physicalAddress(frame: FrameAddress): pointer =
 proc isReservedFrame(frame: FrameAddress): bool =
   var physicalAddress = cast[csize](physicalAddress(frame))
   for entry in reservedMemoryMap:
-    if physicalAddress >= cast[csize](entry.base) and physicalAddress <= cast[csize](entry.base) + entry.size:
+    if (physicalAddress >= cast[csize](entry.base) and 
+        physicalAddress <= cast[csize](entry.base) + entry.size):
       # TODO: add kernel page
-      return true
+        return true
   return false
 
 
-# TODO: allow allocation of multiple pages
-# TODO: return virtual address, not physical
 proc freePage*(page: FrameAddress): void = 
   stackPtr[freePages] = page
   inc(freePages)
 
 
+# TODO: allow allocation of multiple pages
+# TODO: return virtual address, not physical
+# TODO: handle empty stack
 proc allocatePage*: pointer =
   dec(freePages)
   return cast[pointer](stackPtr[freePages].csize * PAGE_SIZE)
@@ -126,8 +130,9 @@ proc removeStackFrames(): void =
 
 
 proc initPageStack*(): void =
+  var 
+    mmapEntries = multibootInfoPtr.mmapLength.csize div multibootInfoPtr.mmapPtr[0].size.csize
   reservedMemoryMap = buildReservedMemoryMap()
-  var mmapEntries = multibootInfoPtr.mmapLength.csize div multibootInfoPtr.mmapPtr[0].size.csize
   stackPtr = cast[ptr FrameStack](addr kernelEnd)
   fillStack(multibootInfoPtr.mmapPtr[], mmapEntries.int)
   removeStackFrames()
