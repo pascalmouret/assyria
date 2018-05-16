@@ -1,3 +1,5 @@
+import paging.types
+
 import multiboot
 import arch_constants
 
@@ -73,7 +75,7 @@ proc isReservedFrame(frame: FrameAddress): bool =
   var physicalAddress = cast[csize](physicalAddress(frame))
   for entry in reservedMemoryMap:
     if (physicalAddress >= cast[csize](entry.base) and 
-        physicalAddress <= cast[csize](entry.base) + entry.size):
+        physicalAddress + PAGE_SIZE <= cast[csize](entry.base) + entry.size):
       # TODO: add kernel page
         return true
   return false
@@ -84,12 +86,18 @@ proc freePage*(page: FrameAddress): void =
   inc(freePages)
 
 
+proc allocatePageFrame*: FrameAddress =
+  if freePages == 0:
+    return nil
+  dec(freePages)
+  return stackPtr[freePages]
+
+
+# tmp
 # TODO: allow allocation of multiple pages
 # TODO: return virtual address, not physical
-# TODO: handle empty stack
 proc allocatePage*: pointer =
-  dec(freePages)
-  return cast[pointer](stackPtr[freePages].csize * PAGE_SIZE)
+  return physicalAddress(allocatePhysicalPage())
 
 
 proc initMemoryBlock(base: pointer, limit: csize): void =

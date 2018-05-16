@@ -1,15 +1,16 @@
-#[
-Multiboot Memory Map Structure (in bytes)
-          +-------------------+
-  0       | size              |
-          +-------------------+
-  4       | base              |
-  12      | limit             |
-          +-------------------+
-  20      | type              |
-          +-------------------+
-]#
+
 type
+  #[
+  Multiboot Memory Map Structure (in bytes)
+            +-------------------+
+    0       | size              |
+            +-------------------+
+    4       | base              |
+    12      | limit             |
+            +-------------------+
+    20      | type              |
+            +-------------------+
+  ]#
   MMapEntryKind* {.size: sizeOf(uint32).} = enum
     Undefined,
     Usable,

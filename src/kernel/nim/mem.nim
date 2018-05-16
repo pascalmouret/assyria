@@ -94,7 +94,9 @@ proc alloc*(size: csize): pointer =
       freeBlock.size = freeBlock.size - totalSize
       freeBlock.base = cast[pointer](cast[uint32](freeBlock.base) + size.uint32)
   else:
-    asm """hlt"""
+    var newPage = allocatePage()
+    if newPage == nil:
+      return nil
     freeBlocks = newBlock(
       allocatePage(),
       PAGE_SIZE,
