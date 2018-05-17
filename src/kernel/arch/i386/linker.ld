@@ -1,47 +1,35 @@
-/* The bootloader will look at this image and start execution at the symbol
-   designated as the entry point. */
-ENTRY(_start)
-OUTPUT_FORMAT("elf32-i386")
+ENTRY(boot)
+OUTPUT_FORMAT(elf32-i386)
 
-/* Tell where the various sections of the object files will be put in the final
-   kernel image. */
-SECTIONS
-{
-	/* Begin putting sections at 1 MiB, a conventional place for kernels to be
-	   loaded at by the bootloader. */
-	. = 1M;
+SECTIONS {
+	. = 0x100000;
 
-  /* Export first address of kernel to set up memory management. */
-  ldKernelStartSymbol = .;
-
-	/* First put the multiboot header, as it is required to be put very early
-	   early in the image or the bootloader won't recognize the file format.
-	   Next we'll put the .text section. */
-	.text BLOCK(4K) : ALIGN(4K)
-	{
+	.init BLOCK (0x1000) : ALIGN (0x1000) {
 		*(.multiboot)
-		*(.text)
+		*(.init)
 	}
 
-	/* Read-only data. */
-	.rodata BLOCK(4K) : ALIGN(4K)
-	{
-		*(.rodata)
-	}
+   	/* 	The kernel will live at 3GB + 1MB in the virtual
+		address space, which will be mapped to 1MB in the
+		physical address space. */
+	. = 0xC0101000;
+   	ldKernelStartSymbol = .;
 
-	/* Read-write data (initialized) */
-	.data BLOCK(4K) : ALIGN(4K)
-	{
+   	.text : AT(ADDR(.text) - 0xC0000000) {
+       	*(.text)
+       	*(.rodata*)
+   	}
+
+   	.data ALIGN (0x1000) : AT(ADDR(.data) - 0xC0000000) {
 		*(.data)
-	}
+   	}
 
-	/* Read-write data (uninitialized) and stack */
-	.bss BLOCK(4K) : ALIGN(4K)
-	{
-		*(COMMON)
-		*(.bss)
-	}
+   	.bss : AT(ADDR(.bss) - 0xC0000000) {
+		_sbss = .;
+       	*(COMMON)
+       	*(.bss)
+       	_ebss = .;
+   	}
 
-  /* Export last address of kernel to set up memory management. */
-	ldKernelEndSymbol = .;
+   	ldKernelEndSymbol = .;
 }
