@@ -32,9 +32,9 @@ proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
   archInit()
   println("Assyria 0.0.1 - HIGHER")
   printMMap(mbInfo.mmapPtr, mbInfo.mmapLength)
-  # asm """
-  #   int $0x42
-  #   mov $0, %eax
-  #   mov $0, %ecx
-  #   div %ecx
-  # """
+  asm """
+    int $0x42
+    mov $0, %eax
+    mov $0, %ecx
+    div %ecx
+  """

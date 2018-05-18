@@ -55,6 +55,20 @@ page_directory:
 		.long 0
 	.endr
 
+.set GDT_SIZE, 4 * 8
+gdt:
+	.skip GDT_SIZE
+gdtr:
+	.short GDT_SIZE - 1
+	.long gdt
+
+.set INTERRUPT_TABLE_SIZE, 256 * 8
+idt:
+	.skip INTERRUPT_TABLE_SIZE
+idtr:
+	.short INTERRUPT_TABLE_SIZE
+	.long idt
+
 .section .init
 .align 4
 boot:
@@ -64,12 +78,12 @@ boot:
 	
 	/* enable PSE */
 	mov %cr4, %ecx
-	or $(1 << 4), %ecx	
+	or $(1 << 4), %ecx
 	mov %ecx, %cr4
 	
 	/* enable paging */
 	mov %cr0, %ecx
-	or $(1 << 31), %ecx 
+	or $(1 << 31), %ecx
 	mov %ecx, %cr0
 
 	/* long jump into high memory */
@@ -77,7 +91,22 @@ boot:
 	jmp %ecx
 .section .text
 .align 4
+loadGDT:
+	lgdt (gdtr)
+	jmp $0x08, $flushGDT			# set segment to 1 and jump
+flushGDT:
+	/*
+	Point all data segments to new segment.
+	*/
+	mov $0x10, %ax 						# our new data seg
+	mov %ax, %ds
+	mov %ax, %es
+	mov %ax, %fs
+	mov %ax, %gs
+	mov %ax, %ss
+	ret
 init_kernel:
+	/* invalidate identity mapped page */
 	movl $page_directory, 0
 	invlpg 0
 
@@ -88,8 +117,23 @@ init_kernel:
 	push %eax
 	push %ebx
 
+	/* setup gdt */
+	pushl $gdt
+	call setGDT
+	add $4, %esp
+	call loadGDT
+
+	/* setup interrupts */
+	pushl $idt
+	call setIDT
+	add $4, %esp
+	lidt (idtr)
+
 	/* call into nim */
 	call kernel_main
 
 	cli
+end:	
 	hlt
+	jmp end
+	
