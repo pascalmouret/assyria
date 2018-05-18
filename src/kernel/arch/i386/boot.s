@@ -55,6 +55,10 @@ page_directory:
 		.long 0
 	.endr
 
+/*
+GDT and IDT are already setup here because it leads to less assembly code and
+their sizes probably won't change anytime soon.
+*/
 .set GDT_SIZE, 4 * 8
 gdt:
 	.skip GDT_SIZE
