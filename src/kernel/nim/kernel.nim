@@ -19,21 +19,22 @@ proc printMMap(mmapPtr: MMapPtr, length: uint32): void =
     printMMapEntry(mmapPtr[i])
     dec(i)
 
-proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
-  multibootInfoPtr = mbInfo
-  archInit()
-  initMem()
-  println("Assyria 0.0.1")
+proc memTest: void =
   var memory = alloc(34) # actual alloc + size of block
   printInt(cast[uint32](memory), 16)
   println("")
   free(memory)
   memory = alloc(2)
   printInt(cast[uint32](memory), 16)
-  println("")
-  # asm """
-  #   int $0x42
-  #   mov $0, %eax
-  #   mov $0, %ecx
-  #   div %ecx
-  # """
+  println("") 
+
+proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
+  archInit()
+  println("Assyria 0.0.1 - HIGHER")
+  printMMap(mbInfo.mmapPtr, mbInfo.mmapLength)
+  asm """
+    int $0x42
+    mov $0, %eax
+    mov $0, %ecx
+    div %ecx
+  """

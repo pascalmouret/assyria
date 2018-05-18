@@ -1,4 +1,4 @@
-.extern setGDT
+.global boot
 
 /* Declare constants for the multiboot header. */
 .set ALIGN,    1<<0             /* align loaded modules on page boundaries */
@@ -6,6 +6,9 @@
 .set FLAGS,    ALIGN | MEMINFO  /* this is the Multiboot 'flag' field */
 .set MAGIC,    0x1BADB002       /* 'magic number' lets bootloader find the header */
 .set CHECKSUM, -(MAGIC + FLAGS) /* checksum of above, to prove we are multiboot */
+
+.set KERNEL_BASE, 0xC0000000 # kernel memory will start at 3GB
+.set KERNEL_PAGE_INDEX, ((KERNEL_BASE >> 22) - 1) 
 
 /*
 Declare a multiboot header that marks the program as a kernel. These are magic
@@ -20,45 +23,78 @@ forced to be within the first 8 KiB of the kernel file.
 .long FLAGS
 .long CHECKSUM
 
-/*
-The multiboot standard does not define the value of the stack pointer register
-(esp) and it is up to the kernel to provide a stack. This allocates room for a
-small stack by creating a symbol at the bottom of it, then allocating 16384
-bytes for it, and finally creating a symbol at the top. The stack grows
-downwards on x86. The stack is in its own section so it can be marked nobits,
-which means the kernel file is smaller because it does not contain an
-uninitialized stack. The stack on x86 must be 16-byte aligned according to the
-System V ABI standard and de-facto extensions. The compiler will assume the
-stack is properly aligned and failure to align the stack will result in
-undefined behavior.
-*/
+/* kernel stack */
 .section .bss
 .align 16
 stack_bottom:
 .skip 16384 # 16 KiB
 stack_top:
 
-gdt:
-	.skip 32 				# space for 4 gdt entries
-
-idt:
-	.skip 256*8 		# space for all 256 interrupts
-idt_end:
-
 .section .data
-gdtr:
-	.short 31 			# size
-gdt_ptr:
-	.long gdt				# base
+.align 0x1000 # page directory needs to be 4k aligned
+page_directory:
+	/*
+	Set two simple page directoy entries. They both refer to the first 4MB of memory.
+	As such the frame address is 0 and no page directory needed.
+	The first page is needed because there is no paging set initially, so CPU would not
+	be able to find the entry point.
+	The second page is where the kernel is actually located at KERNEL_BASE.
+	The bits being set are:
+	bit 0: entry is present
+	bit 1: the page is read/write
+	bit 7: the page is 4MB
+	*/
+	.long 0x00000083
+	/* skippinig empty entries */
+	.rept KERNEL_PAGE_INDEX
+		.long 0
+	.endr
+	.long 0x00000083
+	/* skippinig empty entries */
+	.rept 1024 - KERNEL_PAGE_INDEX
+		.long 0
+	.endr
 
+/*
+GDT and IDT are already setup here because it leads to less assembly code and
+their sizes probably won't change anytime soon.
+*/
+.set GDT_SIZE, 4 * 8
+gdt:
+	.skip GDT_SIZE
+gdtr:
+	.short GDT_SIZE - 1
+	.long gdt
+
+.set INTERRUPT_TABLE_SIZE, 256 * 8
+idt:
+	.skip INTERRUPT_TABLE_SIZE
 idtr:
-	.short idt_end - idt
-idt_ptr:
+	.short INTERRUPT_TABLE_SIZE
 	.long idt
 
+.section .init
+.align 4
+boot:
+	/* put address of page directory into cr3 */
+	mov $(page_directory - KERNEL_BASE), %ecx
+	mov %ecx, %cr3
+	
+	/* enable PSE */
+	mov %cr4, %ecx
+	or $(1 << 4), %ecx
+	mov %ecx, %cr4
+	
+	/* enable paging */
+	mov %cr0, %ecx
+	or $(1 << 31), %ecx
+	mov %ecx, %cr0
+
+	/* long jump into high memory */
+	lea init_kernel, %ecx
+	jmp %ecx
 .section .text
-.global _start
-.type _start, @function
+.align 4
 loadGDT:
 	lgdt (gdtr)
 	jmp $0x08, $flushGDT			# set segment to 1 and jump
@@ -73,80 +109,35 @@ flushGDT:
 	mov %ax, %gs
 	mov %ax, %ss
 	ret
-_start:
-	/*
-	The bootloader has loaded us into 32-bit protected mode on a x86
-	machine. Interrupts are disabled. Paging is disabled. The processor
-	state is as defined in the multiboot standard. The kernel has full
-	control of the CPU. The kernel can only make use of hardware features
-	and any code it provides as part of itself. There's no printf
-	function, unless the kernel provides its own <stdio.h> header and a
-	printf implementation. There are no security restrictions, no
-	safeguards, no debugging mechanisms, only what the kernel provides
-	itself. It has absolute and complete power over the
-	machine.
-	*/
+init_kernel:
+	/* invalidate identity mapped page */
+	movl $page_directory, 0
+	invlpg 0
 
-	/*
-	To set up a stack, we set the esp register to point to the top of our
-	stack (as it grows downwards on x86 systems). This is necessarily done
-	in assembly as languages such as C cannot function without a stack.
-	*/
-	mov $stack_top, %esp
+	/* init stack */
+	movl $stack_top, %esp
 
-	/*
-	Load pointer to the multiboot info structure and the magic multiboot number
-	onto the stack for kernel_main.
-	*/
+	/* mb args */
 	push %eax
 	push %ebx
 
-	/*
-	Setting the GDT by pushing the pointer onto the stack and calling into
-	NIM code. Afterwards the GDT is actually loaded with assembly code.
-	*/
-	pushl (gdt_ptr)
+	/* setup gdt */
+	pushl $gdt
 	call setGDT
-	add $4, %esp 			# clean stack
+	add $4, %esp
 	call loadGDT
 
-	/*
-	Tell the CPU where to find the IDT and passing the pointer to it into NIM
-	code. The interrupts can be set dynamically after that.
-	*/
-	pushl (idt_ptr)
+	/* setup interrupts */
+	pushl $idt
 	call setIDT
-	add $4, %esp			# clean stack
-	lidt (idtr)				# tell the CPU where to check for interrupts
+	add $4, %esp
+	lidt (idtr)
 
-	/*
-	Enter the high-level kernel. The ABI requires the stack is 16-byte
-	aligned at the time of the call instruction (which afterwards pushes
-	the return pointer of size 4 bytes). The stack was originally 16-byte
-	aligned above and we've since pushed a multiple of 16 bytes to the
-	stack since (pushed 0 bytes so far) and the alignment is thus
-	preserved and the call is well defined.
-	*/
+	/* call into nim */
 	call kernel_main
 
-	/*
-	If the system has nothing more to do, put the computer into an
-	infinite loop. To do that:
-	1) Disable interrupts with cli (clear interrupt enable in eflags).
-	   They are already disabled by the bootloader, so this is not needed.
-	   Mind that you might later enable interrupts and return from
-	   kernel_main (which is sort of nonsensical to do).
-	2) Wait for the next interrupt to arrive with hlt (halt instruction).
-	   Since they are disabled, this will lock up the computer.
-	3) Jump to the hlt instruction if it ever wakes up due to a
-	   non-maskable interrupt occurring or due to system management mode.
-	*/
 	cli
-1:	hlt
-	jmp 1b
-
-/*
-Set the size of the _start symbol to the current location '.' minus its start.
-This is useful when debugging or when you implement call tracing.
-*/
-.size _start, . - _start
+end:	
+	hlt
+	jmp end
+	

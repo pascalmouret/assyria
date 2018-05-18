@@ -10,4 +10,4 @@ import mem
 proc archInit*(): void =
   interruptInit()
   vgaInit()
-  initPageStack()
+  # initPageStack()

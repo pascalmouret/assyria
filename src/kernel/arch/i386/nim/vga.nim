@@ -27,7 +27,7 @@ type
   VGABuffer = ptr array[VRAM_LENGTH, VGAEntry]
 
 
-const vram = cast[VGABuffer](0xB8000)
+const vram = cast[VGABuffer](0xC00B8000)
 
 
 proc vgaColorMix*(front: VGAColor, back: VGAColor): VGAColorMix =
