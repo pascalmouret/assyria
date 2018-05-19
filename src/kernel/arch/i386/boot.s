@@ -8,7 +8,6 @@
 .set CHECKSUM, -(MAGIC + FLAGS) /* checksum of above, to prove we are multiboot */
 
 .set KERNEL_BASE, 0xC0000000 # kernel memory will start at 3GB
-.set KERNEL_PAGE_INDEX, ((KERNEL_BASE >> 22) - 1) 
 
 /*
 Declare a multiboot header that marks the program as a kernel. These are magic
@@ -32,6 +31,8 @@ stack_top:
 
 .section .data
 .align 0x1000 # page directory needs to be 4k aligned
+.set KERNEL_PAGE_INDEX, (KERNEL_BASE >> 22) - 1
+.set LAST_PAGE_DIR_ENTRY_OFFSET, 1023 * 4
 page_directory:
 	/*
 	Set two simple page directoy entries. They both refer to the first 4MB of memory.
@@ -54,7 +55,6 @@ page_directory:
 	.rept 1024 - KERNEL_PAGE_INDEX
 		.long 0
 	.endr
-
 /*
 GDT and IDT are already setup here because it leads to less assembly code and
 their sizes probably won't change anytime soon.
@@ -95,14 +95,49 @@ boot:
 	jmp %ecx
 .section .text
 .align 4
+setupIDT:
+	/* setting and loading the IDT */
+	pushl $idt
+	call setIDT
+	add $4, %esp
+	lidt (idtr)
+	/*
+	For convinience the last page directory entry will map
+	to itself, resulting in the address 0xFFFFF000 always pointing
+	to the page directory.
+	Entry is constructed by shifting the address right do discard
+	all but the last 
+	*/
+	movl $(page_directory - KERNEL_BASE), %ecx
+	shr $12, %ecx
+	shl $12, %ecx
+	orl $0x3, %ecx
+	movl $page_directory, %ebx
+	movl %ecx, LAST_PAGE_DIR_ENTRY_OFFSET(%ebx)
+	ret
+setupGDT:
+	pushl $gdt
+	call setGDT
+	add $4, %esp
+	call loadGDT
+	ret
 loadGDT:
+	/*
+	Simply loading the GDT will have no effect, registers
+	also need to address the correct segment.
+	The code segement can only be set during a long jump,
+	which is why we need to jump to the next instruction
+	instead proceeding normally.
+	The data segments used are 0x8 and 0x10, which are
+	assumed to be code and data respectively.
+	*/
 	lgdt (gdtr)
-	jmp $0x08, $flushGDT			# set segment to 1 and jump
+	jmp $0x08, $flushGDT
 flushGDT:
 	/*
 	Point all data segments to new segment.
 	*/
-	mov $0x10, %ax 						# our new data seg
+	mov $0x10, %ax
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
@@ -121,17 +156,8 @@ init_kernel:
 	push %eax
 	push %ebx
 
-	/* setup gdt */
-	pushl $gdt
-	call setGDT
-	add $4, %esp
-	call loadGDT
-
-	/* setup interrupts */
-	pushl $idt
-	call setIDT
-	add $4, %esp
-	lidt (idtr)
+	call setupGDT
+	call setupIDT
 
 	/* call into nim */
 	call kernel_main

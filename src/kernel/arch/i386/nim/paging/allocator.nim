@@ -87,8 +87,8 @@ proc freePage*(page: FrameAddress): void =
 
 
 proc allocatePageFrame*: FrameAddress =
-  if freePages == 0:
-    return nil
+  # if freePages == 0:
+    # return nil
   dec(freePages)
   return stackPtr[freePages]
 
@@ -97,7 +97,7 @@ proc allocatePageFrame*: FrameAddress =
 # TODO: allow allocation of multiple pages
 # TODO: return virtual address, not physical
 proc allocatePage*: pointer =
-  return physicalAddress(allocatePhysicalPage())
+  return physicalAddress(allocatePageFrame())
 
 
 proc initMemoryBlock(base: pointer, limit: csize): void =
