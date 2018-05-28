@@ -42,6 +42,7 @@ type
   IDT = array[256, IDTEntry]
 
 
+# set to correct value by setIDT, called from assembly
 var idt: ptr IDT = cast[ptr IDT](0)
 
 

@@ -1,4 +1,4 @@
-import paging.allocator
+import paging.paging
 import arch_constants
 
 import options
@@ -19,7 +19,7 @@ var usedBlocks: ptr Block = nil
 proc alloc*(size: int): pointer
 
 
-proc initMem*(): void =
+proc memInit*(): void =
   var 
     firstPage: pointer = allocatePage()
     sizeOfBlock: int = sizeOf(Block)

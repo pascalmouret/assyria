@@ -17,8 +17,6 @@ var kernelStart {.header: "<externals.h>", importc: "ldKernelStartSymbol"}: uint
 var kernelEnd {.header: "<externals.h>", importc: "ldKernelEndSymbol"}: uint8
 
 type
-  # the actual address is only 20 bit long, but for simplicities sake
-  FrameAddress = distinct uint32
   FrameStack = UncheckedArray[FrameAddress]
   ReservedMemory = object
     base: pointer
@@ -57,6 +55,10 @@ proc buildReservedMemoryMap(): ReservedMemoryMap =
   ]
 
 
+proc physicalAddress(frame: FrameAddress): pointer =
+  return cast[pointer](frame.csize * PAGE_SIZE)
+
+
 proc nextFrameAlignedAddress(address: pointer): pointer =
   return cast[pointer](
     cast[csize](address) + (PAGE_SIZE.csize - (cast[csize](address) mod PAGE_SIZE))
@@ -65,10 +67,6 @@ proc nextFrameAlignedAddress(address: pointer): pointer =
 
 proc frameAddress(address: pointer): FrameAddress =
   return cast[FrameAddress](cast[csize](address) div PAGE_SIZE.csize)
-
-
-proc physicalAddress(frame: FrameAddress): pointer =
-  return cast[pointer](frame.csize * PAGE_SIZE)
 
 
 proc isReservedFrame(frame: FrameAddress): bool =
@@ -81,7 +79,7 @@ proc isReservedFrame(frame: FrameAddress): bool =
   return false
 
 
-proc freePage*(page: FrameAddress): void = 
+proc freePageFrame*(page: FrameAddress): void = 
   stackPtr[freePages] = page
   inc(freePages)
 
@@ -93,20 +91,13 @@ proc allocatePageFrame*: FrameAddress =
   return stackPtr[freePages]
 
 
-# tmp
-# TODO: allow allocation of multiple pages
-# TODO: return virtual address, not physical
-proc allocatePage*: pointer =
-  return physicalAddress(allocatePageFrame())
-
-
 proc initMemoryBlock(base: pointer, limit: csize): void =
   var
     currentFrame: FrameAddress = frameAddress(nextFrameAlignedAddress(base))
     nextFrame: FrameAddress = cast[FrameAddress](currentFrame.csize + 1)
   while cast[csize](physicalAddress(nextFrame)) <= limit:
     if not isReservedFrame(currentFrame):
-      freePage(currentFrame)
+      freePageFrame(currentFrame)
     currentFrame = nextFrame
     nextFrame = cast[FrameAddress](currentFrame.csize + PAGE_SIZE)
 

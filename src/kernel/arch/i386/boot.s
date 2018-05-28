@@ -105,12 +105,16 @@ setupIDT:
 	For convinience the last page directory entry will map
 	to itself, resulting in the address 0xFFFFF000 always pointing
 	to the page directory.
-	Entry is constructed by shifting the address right do discard
-	all but the last 
+
+	Since pages are addressed by physical addresses we need
+	to subtract the KERNEL_BASE.
 	*/
 	movl $(page_directory - KERNEL_BASE), %ecx
-	shr $12, %ecx
-	shl $12, %ecx
+	/* shifting right to get frame address */
+	shrl $12, %ecx
+	/* shifting left to put into position for directory entry */
+	shll $12, %ecx
+	/* add flags (present and read/write) */
 	orl $0x3, %ecx
 	movl $page_directory, %ebx
 	movl %ecx, LAST_PAGE_DIR_ENTRY_OFFSET(%ebx)

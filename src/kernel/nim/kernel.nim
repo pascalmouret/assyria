@@ -30,9 +30,11 @@ proc memTest: void =
 
 proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
   archInit()
-  println("Assyria 0.0.1 - HIGHER")
+  memInit()
+  println("Assyria 0.0.1")
   printMMap(mbInfo.mmapPtr, mbInfo.mmapLength)
   printInt(cast[ptr UncheckedArray[uint32]](0xFFFFF000)[1023], 2)
+  memTest()
   println("")
   asm """
     int $0x42
