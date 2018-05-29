@@ -39,28 +39,16 @@ proc printUIntRec(i: uint64, base: uint): void =
     print(char((if digit < 10.uint64: ord('0') else: ord('A') - 10) + digit.int))
 
 
-proc printInt*(i: uint64, base: uint): void =
+proc printInt*(i: SomeUnsignedInt, base: uint): void =
   if i != 0:
-    printUIntRec(i, base)
+    printUIntRec(i.uint64, base)
   else:
     print('0')
 
 
-proc printInt*(i: int, base: uint): void =
+proc printInt*(i: SomeSignedInt, base: uint): void =
   if i < 0:
     print('-')
-    printInt(cast[uint32](i * -1), base)
+    printInt(cast[uint64](i * -1), base)
   else:
-    printInt(cast[uint32](i), base)
-
-
-proc printInt*(i: uint32, base: uint): void =
-  printInt(i.uint64, base)
-
-
-proc printInt*(i: uint16, base: uint): void =
-  printInt(i.uint64, base)
-
-
-proc printInt*(i: uint8, base: uint): void =
-  printInt(i.uint64, base)
+    printInt(cast[uint64](i), base)
