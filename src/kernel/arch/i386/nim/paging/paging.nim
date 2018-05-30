@@ -1,6 +1,7 @@
 import arch_constants
 import paging.allocator
 import paging.types
+import io
 
 type
   #[
@@ -146,5 +147,7 @@ proc allocatePage*: pointer =
     
 
 proc pagingInit*: void =
+  printInt(cast[uint32](pageDirectory[0]), 2)
+  println("")
   initPageStack()
   

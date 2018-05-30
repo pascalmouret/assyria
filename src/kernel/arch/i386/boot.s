@@ -183,7 +183,7 @@ paging_defaults:
 	ret
 init_kernel:
 	/* invalidate identity mapped page */
-	movl $page_directory, 0
+	movl $0, page_directory
 	invlpg 0
 
 	/* init stack */
