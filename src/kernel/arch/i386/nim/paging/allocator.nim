@@ -74,8 +74,7 @@ proc isReservedFrame(frame: FrameAddress): bool =
   for entry in reservedMemoryMap:
     if (physicalAddress >= cast[csize](entry.base) and 
         physicalAddress + PAGE_SIZE <= cast[csize](entry.base) + entry.size):
-      # TODO: add kernel page
-        return true
+      return true
   return false
 
 
@@ -111,27 +110,9 @@ proc fillStack(mmap: MMap, entries: int): void =
     inc(i)
 
 
-# remove the pages filled up with the page stack
-proc removeStackFrames(): void =
-  var
-    base: csize = cast[csize](stackPtr)
-    size: csize = freePages * sizeOf(FrameAddress)
-    oldStackCount = 0
-    newStackCount = oldStackCount
-  while oldStackCount < freePages:
-    var 
-      physicalAddress = cast[csize](physicalAddress(stackPtr[oldStackCount]))
-    if not (physicalAddress >= base and physicalAddress <= base + size):
-      inc(newStackCount)
-      stackPtr[newStackCount] = stackPtr[oldStackCount]
-    inc(oldStackCount)
-  freePages = newStackCount
-
-
 proc initPageStack*(): void =
   var 
     mmapEntries = multibootInfoPtr.mmapLength.csize div multibootInfoPtr.mmapPtr[0].size.csize
   reservedMemoryMap = buildReservedMemoryMap()
   stackPtr = cast[ptr FrameStack](addr kernelEnd)
   fillStack(multibootInfoPtr.mmapPtr[], mmapEntries.int)
-  removeStackFrames()

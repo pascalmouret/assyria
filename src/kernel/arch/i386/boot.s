@@ -32,7 +32,8 @@ stack_top:
 .section .data
 .align 0x1000 # page directory needs to be 4k aligned
 .set KERNEL_PAGE_INDEX, (KERNEL_BASE >> 22) - 1
-.set LAST_PAGE_DIR_ENTRY_OFFSET, 1023 * 4
+.set PTABLE_REF_PAGE_DIR_ENTRY_OFFSET, 1022 * 4
+.set LAST_ENTRY_IN_PAGING_TABLE_OFFSET, 1023 * 4
 page_directory:
 	/*
 	Set two simple page directoy entries. They both refer to the first 4MB of memory.
@@ -55,6 +56,12 @@ page_directory:
 	.rept 1024 - KERNEL_PAGE_INDEX
 		.long 0
 	.endr
+.align 0x1000
+ptable_page:
+	.rept 1024
+		.long 0
+	.endr
+	
 /*
 GDT and IDT are already setup here because it leads to less assembly code and
 their sizes probably won't change anytime soon.
@@ -66,11 +73,11 @@ gdtr:
 	.short GDT_SIZE - 1
 	.long gdt
 
-.set INTERRUPT_TABLE_SIZE, 256 * 8
+.set IDT_SIZE, 256 * 8
 idt:
-	.skip INTERRUPT_TABLE_SIZE
+	.skip IDT_SIZE
 idtr:
-	.short INTERRUPT_TABLE_SIZE
+	.short IDT_SIZE
 	.long idt
 
 .section .init
@@ -101,25 +108,9 @@ setupIDT:
 	call setIDT
 	add $4, %esp
 	lidt (idtr)
-	/*
-	For convinience the last page directory entry will map
-	to itself, resulting in the address 0xFFFFF000 always pointing
-	to the page directory.
-
-	Since pages are addressed by physical addresses we need
-	to subtract the KERNEL_BASE.
-	*/
-	movl $(page_directory - KERNEL_BASE), %ecx
-	/* shifting right to get frame address */
-	shrl $12, %ecx
-	/* shifting left to put into position for directory entry */
-	shll $12, %ecx
-	/* add flags (present and read/write) */
-	orl $0x3, %ecx
-	movl $page_directory, %ebx
-	movl %ecx, LAST_PAGE_DIR_ENTRY_OFFSET(%ebx)
 	ret
 setupGDT:
+	/* setting and loading the GDT */
 	pushl $gdt
 	call setGDT
 	add $4, %esp
@@ -148,6 +139,48 @@ flushGDT:
 	mov %ax, %gs
 	mov %ax, %ss
 	ret
+paging_defaults:
+	/*
+	For convinience the last page directory entry will map
+	to itself, resulting in the address 0xFFFFF000 always pointing
+	to the page directory.
+
+	Since pages are addressed by physical addresses we need
+	to subtract the KERNEL_BASE.
+	*/
+	movl $(page_directory - KERNEL_BASE), %ecx
+	/* shifting right to get frame address */
+	shrl $12, %ecx
+	/* shifting left to put into position for directory entry */
+	shll $12, %ecx
+	/* add flags (present and read/write) */
+	orl $3, %ecx
+	movl $page_directory, %ebx
+	movl %ecx, LAST_ENTRY_IN_PAGING_TABLE_OFFSET(%ebx)
+	
+	/*
+	The second to last pdir entry points to the table holding all
+	references for page tables.
+	*/
+	movl $(ptable_page - KERNEL_BASE), %ecx
+	shrl $12, %ecx
+	shll $12, %ecx
+	orl $3, %ecx
+	movl $page_directory, %ebx
+	movl %ecx, PTABLE_REF_PAGE_DIR_ENTRY_OFFSET(%ebx)
+
+	/*
+	The last entry of that table will reference itself, which is 
+	no problem because the last index of the page directory is
+	used for self reference as well.
+	*/
+	movl $(ptable_page - KERNEL_BASE), %ecx
+	shrl $12, %ecx
+	shll $12, %ecx
+	orl $3, %ecx
+	movl $ptable_page, %ebx
+	movl %ecx, LAST_ENTRY_IN_PAGING_TABLE_OFFSET(%ebx)
+	ret
 init_kernel:
 	/* invalidate identity mapped page */
 	movl $page_directory, 0
@@ -156,12 +189,14 @@ init_kernel:
 	/* init stack */
 	movl $stack_top, %esp
 
-	/* mb args */
+	/* push multiboot arguments onto stack to free registers */
 	push %eax
+	addl $KERNEL_BASE, %ebx
 	push %ebx
 
 	call setupGDT
 	call setupIDT
+	call paging_defaults
 
 	/* call into nim */
 	call kernel_main

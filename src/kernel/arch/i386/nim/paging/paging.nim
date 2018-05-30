@@ -39,8 +39,8 @@ type
 
 const PTABLE_PAGE_INDEX = 1022
 
-let pageDirectory: ptr PageDirectory = cast[ptr PageDirectory](0xFFFFF000)
-let ptablePage: ptr PageTable = cast[ptr PageTable](0xFFFFE000)
+const pageDirectory: ptr PageDirectory = cast[ptr PageDirectory](0xFFFFF000)
+const ptablePage: ptr PageTable = cast[ptr PageTable](0xFFBFF000)
 
 
 proc pageDirectoryEntry(
@@ -62,6 +62,7 @@ proc pageDirectoryEntry(
   result = result or (bigPage.uint32 shl 7)
   result = result or (ignored.uint32 shl 8)
   result = result or (frameAddress.uint32 shl 11)
+  return cast[PageDirectoryEntry](result)
 
 
 proc pageTableEntry(
@@ -81,6 +82,7 @@ proc pageTableEntry(
   result = result or (cacheDisabled.uint32 shl 4)
   result = result or (global.uint32 shl 8)
   result = result or (frameAddress.uint32 shl 11)
+  return cast[PageTableEntry](result)
 
 
 proc pageAddress(pdirIndex: int, ptableIndex: int): PageAddress =
@@ -145,5 +147,4 @@ proc allocatePage*: pointer =
 
 proc pagingInit*: void =
   initPageStack()
-  pageDirectory[1022] = pageDirectoryEntry(true, true, false, false, true, false, false, allocatePageFrame())
   
