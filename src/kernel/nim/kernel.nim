@@ -3,6 +3,7 @@ import mem
 
 import io
 import arch
+import arch_constants
 
 proc printMMapEntry(mmapEntry: MMapEntry): void =
   print("Base: ")
@@ -26,7 +27,9 @@ proc memTest: void =
   free(memory)
   memory = alloc(2)
   printInt(cast[uint32](memory), 16)
-  println("") 
+  println("")
+  memory = alloc(10 * PAGE_SIZE)
+  memset(memory, 10 * PAGE_SIZE, PAGE_SIZE)
 
 proc kernel_main(mbInfo: MultibootInfoPtr, magic: int): void {.exportc.} =
   multibootInfoPtr = mbInfo

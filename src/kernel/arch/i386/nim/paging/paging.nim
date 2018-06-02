@@ -40,8 +40,13 @@ type
 
 const PTABLE_PAGE_INDEX = 1022
 
+
 const pageDirectory: ptr PageDirectory = cast[ptr PageDirectory](0xFFFFF000)
 const ptablePage: ptr PageTable = cast[ptr PageTable](0xFFBFF000)
+
+
+proc pagingInit*: void
+proc allocatePage*(num: int = 1): pointer
 
 
 proc pageDirectoryEntry(
@@ -94,13 +99,21 @@ proc virtualAddressPointer(pageAddress: PageAddress): pointer =
   return cast[pointer](pageAddress.uint32 shl 12)
 
 
-proc virtualAddressPointer(pdirIndex: uint, ptableIndex: uint, offset: int = 0): pointer =
+proc virtualAddressPointer(pdirIndex: int, ptableIndex: int, offset: int = 0): pointer =
   return cast[pointer](((pdirIndex.uint32 shl 22) or (ptableIndex.uint32 shl 12)) + offset.uint32)
 
 
-proc getPtable(pdirIndex: uint): ptr PageTable =
+proc getPtable(pdirIndex: int): ptr PageTable =
   return cast[ptr PageTable](virtualAddressPointer(PTABLE_PAGE_INDEX, pdirIndex))
   
+
+proc pdirIndex(pageAddress: PageAddress): int =
+  return (cast[uint32](pageAddress) shr 10).int
+
+
+proc ptableIndex(pageAddress: PageAddress): int =
+  return (cast[uint32](pageAddress) and 0x39F).int # only first ten bits
+
 
 proc isPresent(pdirEntry: PageDirectoryEntry): bool =
   return cast[bool](cast[uint32](pdirEntry) and 1)
@@ -114,19 +127,32 @@ proc isBigPage(pdirEntry: PageDirectoryEntry): bool =
   return cast[bool](cast[uint32](pdirEntry) and (1 shl 7))
 
 
-proc findFreePageAddress: PageAddress =
-  for pdirIndex in 0 .. 1023:
-    if not isPresent(pageDirectory[pdirIndex]):
-      return pageAddress(pdirIndex, 0)
-    elif not isBigPage(pageDirectory[pdirIndex]):
-      var ptable = getPtable(pdirIndex.uint)
-      for ptableIndex in 0 .. 1023:
-        if not isPresent(ptable[ptableIndex]):
-          return pageAddress(pdirIndex, ptableIndex)
-  return cast[PageAddress](0)
+proc isFree(address: PageAddress): bool =
+  var
+    pageDirectoryEntry = pageDirectory[address.pdirIndex()]
+  return (
+    pageDirectoryEntry.isPresent() or 
+    (not pageDirectoryEntry.isBigPage() and not ptablePage[address.ptableIndex()].isPresent())
+  )
+    
+
+proc findFreePageAddress(num: int): PageAddress =
+  var 
+    counter = 0
+  result = NO_FREE_PAGES
+  for pageAddress in 0 .. 1023 * 1023:
+    if cast[PageAddress](pageAddress).isFree():
+      if counter == 0:
+        result = cast[PageAddress](pageAddress)
+      inc(counter)
+      if counter == num:
+        return result
+    else:
+      counter = 0
+  return NO_FREE_PAGES
 
 
-proc newPageTable(pdirIndex: uint): ptr PageTable =
+proc newPageTable(pdirIndex: int): ptr PageTable =
   var
     pageFrame = allocatePageFrame()
     pageTable = cast[ptr PageTable](virtualAddressPointer(PTABLE_PAGE_INDEX, pdirIndex))
@@ -136,18 +162,24 @@ proc newPageTable(pdirIndex: uint): ptr PageTable =
   return pageTable
 
 
-proc allocatePage*: pointer =
+proc allocatePage(pageAddress: PageAddress): pointer =
   var
-    pageAddress = findFreePageAddress()
-    pdirIndex = cast[uint32](pageAddress) shr 10
-    ptableIndex = cast[uint32](pageAddress) and 0x39F # only first ten bits
-    ptable = if not isPresent(pageDirectory[pdirIndex]): newPageTable(pdirIndex) else: getPtable(pdirIndex)
-  ptable[ptableIndex] = pageTableEntry(true, true, false, false, true, false, allocatePageFrame())
-  return virtualAddressPointer(pdirIndex, ptableIndex)
+    directoryEntry = pageDirectory[pageAddress.pdirIndex()]
+    ptable = if directoryEntry.isPresent(): getPtable(pageAddress.pdirIndex()) else: newPageTable(pageAddress.pdirIndex())
+  ptable[pageAddress.ptableIndex()] = pageTableEntry(true, true, false, false, true, false, allocatePageFrame())
+  return virtualAddressPointer(pageAddress)
+
+
+proc allocatePage*(num: int = 1): pointer =
+  var
+    pageAddress = findFreePageAddress(num)
+  if pageAddress == NO_FREE_PAGES:
+    return nil
+  for address in cast[uint32](pageAddress) .. cast[uint32](pageAddress) + num.uint32 - 1:
+    discard allocatePage(cast[PageAddress](address))
+  return virtualAddressPointer(pageAddress)
     
 
 proc pagingInit*: void =
-  printInt(cast[uint32](pageDirectory[0]), 2)
-  println("")
   initPageStack()
   

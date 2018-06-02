@@ -1,7 +1,6 @@
 import paging.paging
 import arch_constants
 
-import options
 import math
 
 # TODO: use built-in list (requires new and other magic)
@@ -16,10 +15,12 @@ var freeBlocks: ptr Block = nil
 var usedBlocks: ptr Block = nil
 
 
+proc memInit*: void
 proc alloc*(size: int): pointer
+proc free*(p: pointer)
 
 
-proc memInit*(): void =
+proc memInit*: void =
   var 
     firstPage: pointer = allocatePage()
     sizeOfBlock: int = sizeOf(Block)
@@ -94,12 +95,14 @@ proc alloc*(size: csize): pointer =
       freeBlock.size = freeBlock.size - totalSize
       freeBlock.base = cast[pointer](cast[uint32](freeBlock.base) + size.uint32)
   else:
-    var newPage = allocatePage()
+    var
+      pageCount = (size div PAGE_SIZE).int
+      newPage = allocatePage(pageCount)
     if newPage == nil:
       return nil
     freeBlocks = newBlock(
-      allocatePage(),
-      PAGE_SIZE,
+      newPage,
+      pageCount * PAGE_SIZE,
       freeBlocks,
       nil
     )
